@@ -1,9 +1,17 @@
-/* Ürün Tanık Denetim — 2014/33/AB modül bazlı akreditasyon denetim çeklistleri (PWA) */
+/* Ürün Tanık Denetim — 2014/33/AB ve (AB) 2023/1230 modül bazlı akreditasyon denetim çeklistleri (PWA) */
 "use strict";
 const D = window.CEKLIST;
 const CODES = ["U", "K", "UY", "UD", "İ"];
 const CODE_TXT = { U: "Uygun", K: "Kısmen uygun / gözlem", UY: "Uygunsuzluk", UD: "Uygulanabilir değil", "İ": "İncelenmedi" };
 const MOD = Object.fromEntries(D.modules.map(m => [m.id, m]));
+const YONS = D.yonetmelikler;
+const YON_OF = Object.fromEntries(YONS.map(y => [y.id, y]));
+const GRP = Object.fromEntries(YONS.flatMap(y => y.gruplar.map(g => [g.id, g])));
+const yonOf = m => YON_OF[m.yon] || YONS[0];
+const yonsOf = mods => YONS.filter(y => mods.some(id => MOD[id] && yonOf(MOD[id]) === y));
+const ortakOf = y => D[y.ortak] || [];
+const ortakSheet = y => ({ id: y.ortakId, ad: y.ortakAd, items: ortakOf(y), yon: y });
+const shCode = sh => sh.mod ? sh.mod.code : sh.id;
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -74,7 +82,7 @@ async function exitApp() {
 function markDirty() { $("#saveState").textContent = "kaydediliyor…"; clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 500); }
 async function saveNow() { if (!A) return; A.updated = new Date().toISOString(); await DB.put("audits", A); $("#saveState").textContent = "✓ kaydedildi"; }
 
-function sheetsOf(a) { return [{ id: "O", ad: "Ortak Şartlar", items: D.ortak }, ...a.modules.map(id => ({ id, ad: MOD[id].ad, items: MOD[id].items, mod: MOD[id] }))]; }
+function sheetsOf(a) { return [...yonsOf(a.modules).map(ortakSheet), ...a.modules.map(id => ({ id, ad: MOD[id].ad, items: MOD[id].items, mod: MOD[id] }))]; }
 function key(sheet, no) { return sheet + "|" + no; }
 function stats(a, sheet) {
   const s = { n: sheet.items.length, U: 0, K: 0, UY: 0, UD: 0, "İ": 0 };
@@ -90,7 +98,7 @@ function totalStats(a) {
 /* ---------- Ana ekran ---------- */
 async function home() {
   A = null; tab = "info"; $("#saveState").textContent = "";
-  setBar("Ürün Tanık Denetim", "2014/33/AB · " + D.modules.length + " modül · v" + D.surum, false);
+  setBar("Ürün Tanık Denetim", YONS.map(y => y.kisa).join(" · ") + " · " + D.modules.length + " modül · v" + D.surum, false);
   const list = (await DB.all("audits")).sort((x, y) => (y.updated || "").localeCompare(x.updated || ""));
   const v = $("#view");
   v.innerHTML = `
@@ -141,15 +149,13 @@ function infoFields(info) {
     return `<label class="f"><span>${l}</span><input class="t" data-k="${k}" type="${t === "date" ? "date" : "text"}" value="${v}"></label>`;
   }).join("")}</div>`;
 }
-const YON = { ad: "2014/33/AB Asansör Yönetmeliği", alt: "Asansörler ve asansör güvenlik aksamları",
-  gruplar: [{ id: "aksam", ad: "Güvenlik Aksamları", md: "Md. 15 · Ek IV-A, VI, VII, IX" }, { id: "asansor", ad: "Asansör", md: "Md. 16 · Ek IV-B, V, VIII, X, XI, XII" }] };
 function launchTree() {
   const ms = g => D.modules.filter(m => m.grup === g.id);
-  return `<div class="tree launch">
-    <details class="lv0"><summary><div class="grow"><b>${YON.ad}</b><div class="muted">${YON.alt} · ${D.modules.length} modül</div></div><span class="arr">›</span></summary>
-    ${YON.gruplar.map(g => `<details class="lv1"><summary><div class="grow"><b>${g.ad}</b><div class="muted">${g.md} · ${ms(g).length} modül</div></div><span class="arr">›</span></summary>
-      <div class="lv2">${ms(g).map(m => `<button class="go" data-m="${m.id}"><div class="grow"><b>${m.code}</b> ${esc(m.ad)}<div class="muted">${m.items.length} madde + ${D.ortak.length} ortak şart · dokunun, denetim açılsın</div></div><span class="plus">＋</span></button>`).join("")}</div></details>`).join("")}
-    </details></div>`;
+  return `<div class="tree launch">${YONS.map(y => { const ym = D.modules.filter(m => yonOf(m) === y);
+    return `<details class="lv0"><summary><div class="grow"><b>${y.ad}</b><div class="muted">${y.alt} · ${ym.length} modül</div></div><span class="arr">›</span></summary>
+    ${y.gruplar.map(g => `<details class="lv1"><summary><div class="grow"><b>${g.ad}</b><div class="muted">${g.md} · ${ms(g).length} modül</div></div><span class="arr">›</span></summary>
+      <div class="lv2">${ms(g).map(m => `<button class="go" data-m="${m.id}"><div class="grow"><b>${m.code}</b> ${esc(m.ad)}<div class="muted">${m.items.length} madde + ${ortakOf(y).length} ortak şart · dokunun, denetim açılsın</div></div><span class="plus">＋</span></button>`).join("")}</div></details>`).join("")}
+    </details>`; }).join("")}</div>`;
 }
 async function startAudit(mods) {
   A = { id: uid(), created: new Date().toISOString(), info: { tarih: new Date().toISOString().slice(0, 10), tur: "Tanık Denetim / Witness Assessment" }, modules: D.modules.map(m => m.id).filter(id => mods.includes(id)), answers: {}, tanik: {} };
@@ -158,22 +164,23 @@ async function startAudit(mods) {
 function modTree(sel, readonly) {
   const mods = g => D.modules.filter(m => m.grup === g.id);
   const box = (cls, val, on, extra = "") => readonly ? "" : `<input type="checkbox" class="${cls}" ${val ? `value="${val}"` : ""} ${on ? "checked" : ""} ${extra}>`;
-  const allOn = D.modules.every(m => sel.includes(m.id));
-  return `<div class="tree">
-    <label class="tr0">${box("cb-yon", "", allOn)}<div><b>${YON.ad}</b><div class="muted">${YON.alt} · ${D.modules.length} modül · her denetimde ayrıca ${D.ortak.length} maddelik Ortak Şartlar</div></div></label>
-    ${YON.gruplar.map(g => { const ms = mods(g); const on = ms.every(m => sel.includes(m.id));
-      return `<details class="tr1" open><summary><label onclick="event.stopPropagation()">${box("cb-grp", "", on, `data-g="${g.id}"`)}<div><b>${g.ad}</b> <span class="muted">${g.md} · ${ms.length} modül</span></div></label></summary>
-      <div class="tr2">${ms.map(m => `<label>${box("cb-mod", m.id, sel.includes(m.id), `data-g="${g.id}"`)}<div><b>${m.code}</b> ${esc(m.ad)}<div class="muted">${m.items.length} madde</div></div></label>`).join("")}</div></details>`; }).join("")}
+  return `<div class="tree">${YONS.map(y => { const ym = D.modules.filter(m => yonOf(m) === y); const allOn = ym.every(m => sel.includes(m.id));
+    return `<label class="tr0">${box("cb-yon", "", allOn, `data-y="${y.id}"`)}<div><b>${y.ad}</b><div class="muted">${y.alt} · ${ym.length} modül · her denetimde ayrıca ${ortakOf(y).length} maddelik ${esc(y.ortakAd)}</div></div></label>
+    ${y.gruplar.map(g => { const ms = mods(g); const on = ms.every(m => sel.includes(m.id));
+      return `<details class="tr1" open><summary><label onclick="event.stopPropagation()">${box("cb-grp", "", on, `data-g="${g.id}" data-y="${y.id}"`)}<div><b>${g.ad}</b> <span class="muted">${g.md} · ${ms.length} modül</span></div></label></summary>
+      <div class="tr2">${ms.map(m => `<label>${box("cb-mod", m.id, sel.includes(m.id), `data-g="${g.id}" data-y="${y.id}"`)}<div><b>${m.code}</b> ${esc(m.ad)}<div class="muted">${m.items.length} madde</div></div></label>`).join("")}</div></details>`; }).join("")}`; }).join("")}
   </div>`;
 }
 function bindTree(root) {
   const sync = () => {
-    YON.gruplar.forEach(g => { const ms = [...root.querySelectorAll(`.cb-mod[data-g="${g.id}"]`)]; const gb = root.querySelector(`.cb-grp[data-g="${g.id}"]`);
-      const n = ms.filter(x => x.checked).length; gb.checked = n === ms.length; gb.indeterminate = n > 0 && n < ms.length; });
-    const all = [...root.querySelectorAll(".cb-mod")]; const n = all.filter(x => x.checked).length; const y = root.querySelector(".cb-yon");
-    y.checked = n === all.length; y.indeterminate = n > 0 && n < all.length;
+    YONS.forEach(y => {
+      y.gruplar.forEach(g => { const ms = [...root.querySelectorAll(`.cb-mod[data-g="${g.id}"]`)]; const gb = root.querySelector(`.cb-grp[data-g="${g.id}"]`);
+        const n = ms.filter(x => x.checked).length; gb.checked = n === ms.length; gb.indeterminate = n > 0 && n < ms.length; });
+      const all = [...root.querySelectorAll(`.cb-mod[data-y="${y.id}"]`)]; const n = all.filter(x => x.checked).length; const yb = root.querySelector(`.cb-yon[data-y="${y.id}"]`);
+      yb.checked = n === all.length; yb.indeterminate = n > 0 && n < all.length;
+    });
   };
-  root.querySelector(".cb-yon").onchange = e => { root.querySelectorAll(".cb-mod").forEach(x => x.checked = e.target.checked); sync(); };
+  root.querySelectorAll(".cb-yon").forEach(yb => yb.onchange = () => { root.querySelectorAll(`.cb-mod[data-y="${yb.dataset.y}"]`).forEach(x => x.checked = yb.checked); sync(); });
   root.querySelectorAll(".cb-grp").forEach(gb => gb.onchange = () => { root.querySelectorAll(`.cb-mod[data-g="${gb.dataset.g}"]`).forEach(x => x.checked = gb.checked); sync(); });
   root.querySelectorAll(".cb-mod").forEach(x => x.onchange = sync);
   sync();
@@ -214,7 +221,7 @@ function renderAudit() {
   const v = $("#view");
   let lastG = null;
   v.innerHTML = `<nav class="tabs">${tabs.map(x => { const m = MOD[x.id]; let pre = "";
-    if (m && m.grup !== lastG) { lastG = m.grup; pre = `<span class="tabgrp">${m.grup === "aksam" ? "Güvenlik Aksamları" : "Asansör"} ›</span>`; }
+    if (m && m.grup !== lastG) { lastG = m.grup; pre = `<span class="tabgrp">${esc((GRP[m.grup] || {}).ad || "")} ›</span>`; }
     else if (!m && lastG && x.id === "tanik") { lastG = null; pre = `<span class="tabgrp">│</span>`; }
     return pre + `<button class="tab ${x.id === tab ? "on" : ""}" data-t="${x.id}">${esc(x.t)}${x.sub ? `<small>${x.sub}</small>` : ""}</button>`; }).join("")}</nav><div id="pane"></div>`;
   v.querySelectorAll(".tab").forEach(b => b.onclick = () => { tab = b.dataset.t; renderAudit(); window.scrollTo(0, 0); });
@@ -358,7 +365,7 @@ function renderSummary() {
     <tr class="tot"><td>TOPLAM</td><td>${t.n}</td>${CODES.map(c => `<td>${t[c]}</td>`).join("")}<td>${t.n - t.done}</td><td>${t.pct}</td></tr></table></div>
     <div class="row"><button class="btn" id="xl">⬇ Excel (.xlsx)</button><button class="btn sec" id="pr">🖨 Yazdır / PDF</button><button class="btn sec" id="js">⬇ JSON yedek</button></div>
     <h2>Bulgular (${F.length})</h2>
-    ${F.length ? F.map(f => `<div class="card"><span class="badge b-${f.x.v}">${f.x.v}</span> <b>${f.sh.mod ? f.sh.mod.code : "O"} · ${esc(f.it.no)}</b> — ${esc(f.it.t)}
+    ${F.length ? F.map(f => `<div class="card"><span class="badge b-${f.x.v}">${f.x.v}</span> <b>${shCode(f.sh)} · ${esc(f.it.no)}</b> — ${esc(f.it.t)}
       <div class="muted">Dayanak: ${esc(f.it.d)}</div>${f.x.bulgu ? `<div><b>Bulgu:</b> ${esc(f.x.bulgu)}</div>` : `<div class="muted">Bulgu metni girilmemiş.</div>`}
       ${f.x.kanit ? `<div class="muted">Kanıt: ${esc(f.x.kanit)}</div>` : ""}</div>`).join("") : `<div class="empty">UY veya K işaretli madde yok.</div>`}`;
   $("#xl").onclick = exportXlsx; $("#pr").onclick = printReport; $("#js").onclick = exportJson;
@@ -398,7 +405,7 @@ function exportXlsx() {
   const T = totalStats(A); sm.push(["TOPLAM", T.n, ...CODES.map(c => T[c]), T.n - T.done, T.pct]);
   const wsS = XLSX.utils.aoa_to_sheet(sm); wsS["!cols"] = [{ wch: 36 }, ...Array(8).fill({ wch: 10 })]; XLSX.utils.book_append_sheet(wb, wsS, "Bulgu Özeti");
   const fl = [["No", "Tür", "Sayfa", "Madde no", "Kontrol maddesi", "Bulgu", "Kanıt", "Dayanak"]];
-  findings(A).forEach((f, i) => fl.push([i + 1, f.x.v === "UY" ? "Uygunsuzluk" : "Gözlem", f.sh.mod ? f.sh.mod.code : "O", f.it.no, f.it.t, f.x.bulgu || "", f.x.kanit || "", f.it.d]));
+  findings(A).forEach((f, i) => fl.push([i + 1, f.x.v === "UY" ? "Uygunsuzluk" : "Gözlem", shCode(f.sh), f.it.no, f.it.t, f.x.bulgu || "", f.x.kanit || "", f.it.d]));
   const wf = XLSX.utils.aoa_to_sheet(fl); wf["!cols"] = [{ wch: 5 }, { wch: 14 }, { wch: 8 }, { wch: 9 }, { wch: 70 }, { wch: 50 }, { wch: 34 }, { wch: 34 }]; XLSX.utils.book_append_sheet(wb, wf, "Bulgu Listesi");
   const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
   download(new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), fname("xlsx"));
@@ -433,11 +440,11 @@ function printReport() {
     body{font:11px Arial,sans-serif;margin:16px;color:#111}h1{font-size:16px;color:#1F3864;margin:0 0 4px}h2{font-size:13px;color:#1F3864;margin:16px 0 4px;page-break-after:avoid}
     table{width:100%;border-collapse:collapse}td,th{border:1px solid #bbb;padding:3px 4px;vertical-align:top}th{background:#1F3864;color:#fff}
     .m{color:#666;font-size:9px}.c{text-align:center;font-weight:bold;width:34px}.i td:first-child{width:150px;background:#DEE7F2;font-weight:bold}tr{page-break-inside:avoid}</style></head><body>
-    <h1>2014/33/AB Akreditasyon Denetim Raporu — Çeklist</h1>
+    <h1>${yonsOf(A.modules).map(y => y.kisa).join(" + ")} Akreditasyon Denetim Raporu — Çeklist</h1>
     <table class="i">${INFO.map(([k, l]) => `<tr><td>${l}</td><td>${esc(A.info[k] || "")}</td></tr>`).join("")}<tr><td>Modüller</td><td>${A.modules.map(id => MOD[id].code + " " + esc(MOD[id].ad)).join("; ")}</td></tr>
     <tr><td>Sonuç</td><td>${t.done}/${t.n} madde değerlendirildi (%${t.pct}) · U ${t.U} · K ${t.K} · UY ${t.UY} · UD ${t.UD} · İ ${t["İ"]}</td></tr></table>
-    <h2>Bulgular (${F.length})</h2><table><tr><th>Tür</th><th>Sayfa / no</th><th>Madde</th><th>Bulgu</th></tr>${F.map(f => `<tr><td class="c">${f.x.v}</td><td>${f.sh.mod ? f.sh.mod.code : "O"} ${esc(f.it.no)}</td><td>${esc(f.it.t)}<div class="m">${esc(f.it.d)}</div></td><td>${esc(f.x.bulgu || "")}</td></tr>`).join("")}</table>
-    ${sheetsOf(A).map(s => `<h2>${s.mod ? s.mod.code + " — " + esc(s.mod.baslik) : "Ortak Şartlar"}</h2><table><tr><th>No</th><th>Kontrol maddesi / dayanak</th><th>Değ.</th><th>Kanıt</th><th>Bulgu / not</th></tr>${s.items.map(it => row(s, it)).join("")}</table>`).join("")}
+    <h2>Bulgular (${F.length})</h2><table><tr><th>Tür</th><th>Sayfa / no</th><th>Madde</th><th>Bulgu</th></tr>${F.map(f => `<tr><td class="c">${f.x.v}</td><td>${shCode(f.sh)} ${esc(f.it.no)}</td><td>${esc(f.it.t)}<div class="m">${esc(f.it.d)}</div></td><td>${esc(f.x.bulgu || "")}</td></tr>`).join("")}</table>
+    ${sheetsOf(A).map(s => `<h2>${s.mod ? s.mod.code + " — " + esc(s.mod.baslik) : esc(s.ad)}</h2><table><tr><th>No</th><th>Kontrol maddesi / dayanak</th><th>Değ.</th><th>Kanıt</th><th>Bulgu / not</th></tr>${s.items.map(it => row(s, it)).join("")}</table>`).join("")}
     <script>setTimeout(()=>print(),300)<\/script></body></html>`);
   w.document.close();
 }

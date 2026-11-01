@@ -1,6 +1,6 @@
-# Ürün Tanık Denetim — 2014/33/AB
+# Ürün Tanık Denetim — 2014/33/AB · (AB) 2023/1230
 
-2014/33/AB Asansör Direktifi (Asansör Yönetmeliği) kapsamında onaylanmış kuruluşların **modül bazlı akreditasyon denetimi** için çevrimdışı çalışan çeklist uygulaması (PWA).
+2014/33/AB Asansör Direktifi (Asansör Yönetmeliği) ve (AB) 2023/1230 Makine Tüzüğü kapsamında onaylanmış kuruluşların **modül bazlı akreditasyon denetimi** için çevrimdışı çalışan çeklist uygulaması (PWA).
 
 **Uygulama:** https://zafer-74.github.io/urun-tanik-denetim/
 
@@ -17,9 +17,15 @@
 | | L4 Modül E (Ek X) | 54 |
 | | L5 Modül D (Ek XII) | 53 |
 | | L6 Modül H1 (Ek XI) | 64 |
-| Tüm denetimler | Ortak Şartlar (Md. 24, 26, 30, 32–34, 36) | 31 |
+| Tüm asansör denetimleri | Ortak Şartlar (2014/33/AB Md. 24, 26, 30, 32–34, 36) | 31 |
+| Makine ve ilgili ürünler — (AB) 2023/1230 Md. 25 | M1 Modül B (Ek VII) | 56 |
+| | M2 Modül G (Ek X) | 44 |
+| | M3 Modül H (Ek IX) | 56 |
+| Tüm makine denetimleri | Makine Ortak Şartlar ((AB) 2023/1230 Md. 25(5), 30, 32, 36(2), 38–40, 42) | 32 |
 
-Dayanak: 2014/33/AB Ek IV–XII · EA-2/17 M:2026 (rev05) + S1:2026 · NB-L RfU derlemesi 16.07.2026.
+Dayanak: 2014/33/AB Ek IV–XII · (AB) 2023/1230 Md. 25, 30–42, Ek IV, VII, IX, X · EA-2/17 M:2026 (rev05) + S1:2026 · NB-L RfU derlemesi 16.07.2026.
+
+Bir denetimde iki mevzuattan modül seçilirse her mevzuatın ortak şartları ayrı sayfa olarak eklenir (O, OM).
 
 ## Özellikler
 - Denetim başına modül seçimi (birden fazla modül tek denetimde)

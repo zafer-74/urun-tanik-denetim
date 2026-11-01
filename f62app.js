@@ -89,10 +89,13 @@ function bindEkp(root, rerender) {
     setTimeout(() => { const ins = root.querySelectorAll('.ekprow input[data-x="ad"]'); ins[ins.length - 1]?.focus(); }, 30); };
 }
 function f62Standart() {
-  const hs = new Set();
-  A.modules.forEach(id => { const o = Object.fromEntries(MOD[id].ozet); const a = o["Akreditasyon (EA-2/17 M:2026)"] || o["Akreditasyon (EA-2/17 S1)"] || ""; hs.add(a.split("·")[0].trim()); });
-  return "2014/33/AB Asansör Direktifi (Asansör Yönetmeliği) — " + A.modules.map(id => MOD[id].baslik.split("—")[0].trim().replace(/^EK/, "Ek")).join(", ") +
-    "\n" + [...hs].join(", ") + "; EA-2/17 M:2026 (+S1); NB-L RfU (16.07.2026)";
+  return yonsOf(A.modules).map(y => {
+    const ms = A.modules.filter(id => yonOf(MOD[id]) === y), hs = new Set();
+    ms.forEach(id => { const o = Object.fromEntries(MOD[id].ozet); const a = o["Akreditasyon (EA-2/17 M:2026)"] || o["Akreditasyon (EA-2/17 S1)"] || ""; hs.add(a.split("·")[0].trim()); });
+    const ad = y.id === "asansor" ? "2014/33/AB Asansör Direktifi (Asansör Yönetmeliği)" : y.ad;
+    return ad + " — " + ms.map(id => MOD[id].baslik.split("—")[0].trim().replace(/^EK/, "Ek")).join(", ") +
+      "\n" + [...hs].join(", ") + "; EA-2/17 M:2026 (+S1)" + (y.id === "asansor" ? "; NB-L RfU (16.07.2026)" : "; NB-M koordinasyon grubu dokümanları");
+  }).join("\n");
 }
 function f62Kapsam() {
   return A.modules.map(id => { const m = MOD[id]; const o = Object.fromEntries(m.ozet); return m.code + " " + m.ad + ": " + (o["Ürün"] || ""); }).join("\n");
@@ -106,19 +109,19 @@ function f62Ozet24() {
   });
   const t = totalStats(A);
   if (t.UY) ap.v = "3"; else if (t.K) ap.v = "2";
-  const o = stats(A, { id: "O", items: D.ortak });
-  lines.push(`Ortak Şartlar (Md. 24, 26, 30, 32–34, 36): ${o.done}/${o.n} madde — U ${o.U}, K ${o.K}, UY ${o.UY}, UD ${o.UD}.`);
+  yonsOf(A.modules).forEach(y => { const o = stats(A, ortakSheet(y));
+    lines.push(`${y.ortakAd} (${y.ortakMd}): ${o.done}/${o.n} madde — U ${o.U}, K ${o.K}, UY ${o.UY}, UD ${o.UD}.`); });
   return { text: lines.join("\n"), ap: ap.v };
 }
 function f62Uygunsuzluk() {
-  return findings(A).filter(f => f.x.v === "UY").map((f, i) => `${i + 1}) ${f.sh.mod ? f.sh.mod.code : "O"} ${f.it.no} — ${f.x.bulgu || f.it.t}\n   Dayanak: ${f.it.d}${f.x.kanit ? "\n   Kanıt: " + f.x.kanit : ""}`).join("\n");
+  return findings(A).filter(f => f.x.v === "UY").map((f, i) => `${i + 1}) ${shCode(f.sh)} ${f.it.no} — ${f.x.bulgu || f.it.t}\n   Dayanak: ${f.it.d}${f.x.kanit ? "\n   Kanıt: " + f.x.kanit : ""}`).join("\n");
 }
 function f62Sonuc() {
   const t = totalStats(A);
   const gozlem = findings(A).filter(f => f.x.v === "K");
   return `${A.modules.map(id => MOD[id].code + " " + MOD[id].ad).join(", ")} kapsamında tanık denetimi gerçekleştirilmiştir. ` +
     `Çeklistte ${t.n} maddenin ${t.done}'i değerlendirilmiş; ${t.U} uygun, ${t.K} kısmen uygun (gözlem), ${t.UY} uygunsuzluk, ${t.UD} uygulanabilir değil olarak işaretlenmiştir.` +
-    (gozlem.length ? "\nGözlemler:\n" + gozlem.map(f => `- ${f.sh.mod ? f.sh.mod.code : "O"} ${f.it.no}: ${f.x.bulgu || f.it.t}`).join("\n") : "");
+    (gozlem.length ? "\nGözlemler:\n" + gozlem.map(f => `- ${shCode(f.sh)} ${f.it.no}: ${f.x.bulgu || f.it.t}`).join("\n") : "");
 }
 
 function renderF62() {
@@ -266,11 +269,11 @@ function bindF62B1(root, rerender) {
 function renderKapak() {
   const r = f62(), p = $("#pane");
   const covers = A.modules.map(id => { const m = MOD[id], o = Object.fromEntries(m.ozet);
-    const grp = m.grup === "aksam" ? "Güvenlik Aksamları" : "Asansör";
-    return `<div class="cover"><div class="cv-top"><span class="cv-code">${m.code}</span><div><div class="muted">2014/33/AB Asansör Yönetmeliği › ${grp}</div><b>${esc(m.baslik)}</b></div></div>
+    const grp = (GRP[m.grup] || {}).ad || "", y = yonOf(m);
+    return `<div class="cover"><div class="cv-top"><span class="cv-code">${m.code}</span><div><div class="muted">${esc(y.ad)} › ${esc(grp)}</div><b>${esc(m.baslik)}</b></div></div>
       <div class="kunye">${["Direktif dayanağı", "Başvuran / OK çıktısı"].map(l => o[l] ? `<div><b>${l}</b><span>${esc(o[l])}</span></div>` : "").join("")}
       <div><b>Akreditasyon</b><span>${esc(o["Akreditasyon (EA-2/17 M:2026)"] || o["Akreditasyon (EA-2/17 S1)"] || "")}</span></div>
-      <div><b>Çeklist</b><span>${m.items.length} modül maddesi + ${D.ortak.length} ortak şart</span></div></div></div>`; }).join("");
+      <div><b>Çeklist</b><span>${m.items.length} modül maddesi + ${ortakOf(y).length} ortak şart</span></div></div></div>`; }).join("");
   p.innerHTML = `<div class="formhead"><div class="fh-l">TÜRK AKREDİTASYON KURUMU</div><div class="fh-r">F<br><small>701-062</small></div></div>
     <div class="fh-title"><b>Ürün Belgelendirme Kuruluşları için Tanık Denetim Raporu</b><i>Witness Assessment Report Used For Product Certification</i></div>
     ${covers}
@@ -280,6 +283,6 @@ function renderKapak() {
     ${ekpHtml(r)}
     <div class="row" style="margin-top:12px"><button class="btn" id="kpGo">Çeklisti başlat ›</button><button class="btn sec" id="kpInfo">✎ Modülleri değiştir</button></div>`;
   bindF62B1(p, renderKapak); bindDok(p, renderKapak); bindEkp(p, renderKapak);
-  $("#kpGo").onclick = () => { tab = A.modules[0] || "O"; renderAudit(); window.scrollTo(0, 0); };
+  $("#kpGo").onclick = () => { tab = A.modules[0] || sheetsOf(A)[0].id; renderAudit(); window.scrollTo(0, 0); };
   $("#kpInfo").onclick = () => editInfo(A);
 }
