@@ -45,7 +45,32 @@ let saveTimer = null;
 const photoCache = new Map();
 
 function toast(msg, ms = 2200) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => t.hidden = true, ms); }
-function setBar(title, sub, back) { $("#barTitle").textContent = title; $("#barSub").textContent = sub || ""; $("#btnBack").hidden = !back; $("#btnMenu").hidden = !A; }
+function setBar(title, sub, back) { $("#barTitle").textContent = title; $("#barSub").textContent = sub || ""; $("#btnBack").hidden = !back; $("#btnMenu").hidden = !A; $("#btnExit").hidden = !!A; }
+
+/* ---------- Silme ve çıkış ---------- */
+async function deleteAudit(a) {
+  const ad = a.info.kurulus || "(kuruluş adı yok)";
+  if (!confirm(`"${ad}" (${a.info.tarih || ""}) denetimi, fotoğrafları ve F701-062 raporu kalıcı olarak silinsin mi?\n\nGeri almak için önce JSON yedeği almanız önerilir.`)) return;
+  for (const p of await DB.photosOf(a.id)) { await DB.del("photos", p.id); photoCache.delete(p.id); }
+  await DB.del("audits", a.id);
+  if (A && A.id === a.id) { clearTimeout(saveTimer); saveTimer = null; A = null; }
+  toast("Denetim silindi"); home();
+}
+async function exitApp() {
+  $("#menu").hidden = true;
+  if (A) { clearTimeout(saveTimer); await saveNow(); }
+  A = null;
+  try { window.close(); } catch {}
+  setTimeout(() => {           // tarayıcı pencereyi kapatmadıysa (iOS/Android/sekme) çıkış ekranı göster
+    setBar("Ürün Tanık Denetim", "Oturum kapatıldı", false); $("#btnExit").hidden = true; $("#saveState").textContent = "";
+    const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua) || (/Mac/.test(ua) && "ontouchend" in document), and = /Android/.test(ua);
+    $("#view").innerHTML = `<div class="card" style="text-align:center;padding:30px 16px;margin-top:30px">
+      <div style="font-size:44px">✓</div><h2 style="margin-top:6px">Tüm veriler kaydedildi</h2>
+      <p class="muted">Uygulamayı güvenle kapatabilirsiniz.<br>${ios ? "iPhone/iPad: ekranın altından yukarı kaydırın." : and ? "Android: geri tuşuna basın veya son uygulamalar ekranından kaydırarak kapatın." : "Windows: pencerenin sağ üstündeki ✕ düğmesine basın (veya Alt+F4)."}</p>
+      <button class="btn" id="reopen" style="margin-top:10px">Uygulamaya geri dön</button></div>`;
+    $("#reopen").onclick = () => home();
+  }, 300);
+}
 function markDirty() { $("#saveState").textContent = "kaydediliyor…"; clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 500); }
 async function saveNow() { if (!A) return; A.updated = new Date().toISOString(); await DB.put("audits", A); $("#saveState").textContent = "✓ kaydedildi"; }
 
@@ -86,9 +111,12 @@ async function home() {
     const d = document.createElement("div"); d.className = "card audit";
     d.innerHTML = `<div class="row"><div class="grow"><b>${esc(a.info.kurulus || "(kuruluş adı yok)")}</b>
       <div class="muted">${esc(a.info.tarih || "")} · ${esc(a.info.tur || "")} · ${a.modules.map(id => MOD[id].code).join(", ")}</div></div>
-      <div class="muted" style="text-align:right">${t.done}/${t.n}<br>${t.UY ? `<span class="badge b-UY">${t.UY} UY</span> ` : ""}${t.K ? `<span class="badge b-K">${t.K} K</span>` : ""}</div></div>
+      <div class="muted" style="text-align:right">${t.done}/${t.n}<br>${t.UY ? `<span class="badge b-UY">${t.UY} UY</span> ` : ""}${t.K ? `<span class="badge b-K">${t.K} K</span>` : ""}</div>
+      <button class="delbtn" title="Denetimi sil" aria-label="Denetimi sil">🗑</button></div>
       <div class="bar"><i style="width:${t.pct}%"></i></div>`;
-    d.onclick = () => openAudit(a.id); al.appendChild(d);
+    d.onclick = () => openAudit(a.id);
+    d.querySelector(".delbtn").onclick = e => { e.stopPropagation(); deleteAudit(a); };
+    al.appendChild(d);
   });
   $("#new").onclick = () => editInfo(null);
   $("#btnUpd").onclick = () => doUpdate();
@@ -393,19 +421,19 @@ $("#btnMenu").onclick = e => {
   e.stopPropagation(); const m = $("#menu");
   if (!m.hidden) return (m.hidden = true);
   m.innerHTML = `<button data-a="info">✎ Denetim bilgileri ve modüller</button><button data-a="xl">⬇ Excel'e aktar</button><button data-a="pr">🖨 Yazdır / PDF</button><button data-a="f62">⬇ F701-062 tanık raporu (Word)</button>
-    <button data-a="js">⬇ JSON yedeği (cihaz aktarımı)</button><button data-a="dup">⧉ Denetimi kopyala (boş çeklist)</button><button class="d" data-a="del">🗑 Denetimi sil</button>`;
+    <button data-a="js">⬇ JSON yedeği (cihaz aktarımı)</button><button data-a="dup">⧉ Denetimi kopyala (boş çeklist)</button><button class="d" data-a="del">🗑 Denetimi sil</button><button data-a="exit">⏻ Programdan çık</button>`;
   m.hidden = false;
   m.querySelectorAll("button").forEach(b => b.onclick = async () => {
     m.hidden = true; const a = b.dataset.a;
     if (a === "info") editInfo(A);
     if (a === "f62") exportF62(); if (a === "xl") exportXlsx(); if (a === "pr") printReport(); if (a === "js") exportJson();
     if (a === "dup") { const n = { ...A, id: uid(), created: new Date().toISOString(), answers: {}, tanik: {}, info: { ...A.info, kurulus: (A.info.kurulus || "") + " (yeni)" } }; A = n; await saveNow(); openAudit(n.id); toast("Boş kopya oluşturuldu"); }
-    if (a === "del" && confirm("Bu denetim ve fotoğrafları kalıcı olarak silinsin mi?")) {
-      for (const p of await DB.photosOf(A.id)) await DB.del("photos", p.id); await DB.del("audits", A.id); toast("Silindi"); home();
-    }
+    if (a === "del") deleteAudit(A);
+    if (a === "exit") exitApp();
   });
 };
 document.addEventListener("click", () => { $("#menu").hidden = true; });
+$("#btnExit").onclick = () => exitApp();
 $("#btnBack").onclick = async () => { await saveNow(); if (A && $("#view .tabs")) home(); else if (A) openAudit(A.id); else home(); };
 window.addEventListener("beforeunload", () => { if (saveTimer) saveNow(); });
 

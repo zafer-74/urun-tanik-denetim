@@ -117,3 +117,6 @@ table.sum tr.tot td{background:var(--light);font-weight:700}
 .tree .tr1>summary b{color:var(--blue)}
 .tree .tr2{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:2px 8px;margin-left:22px}
 .tabgrp{flex:0 0 auto;align-self:center;font-size:11px;font-weight:700;color:var(--blue);padding:0 2px 0 6px;white-space:nowrap}
+
+.delbtn{flex:0 0 auto;background:#fff;border:1px solid var(--line);border-radius:8px;width:36px;height:36px;cursor:pointer;font-size:16px}
+.delbtn:hover{border-color:var(--UY);background:#fdecea}
