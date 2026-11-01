@@ -186,3 +186,12 @@ table.sum tr.tot td{background:var(--light);font-weight:700}
   .ekprow .c2{grid-column:1;grid-row:2}.ekprow .c3{grid-column:2/4;grid-row:2}
   .ekprow .c4{grid-column:1;grid-row:3}.ekprow .c5{grid-column:2/4;grid-row:3}
 }
+/* Geçiş denetim raporu (gecis.js) */
+.gtab{display:flex;flex-direction:column;gap:6px}
+.gtab .gh,.gtab .gr{display:grid;grid-template-columns:44px 1fr 62px 62px 1.1fr 50px;gap:6px;align-items:center}
+.gtab .gh{font-size:12px;font-weight:600;color:#55627a}
+.gtab .gr{border-top:1px solid #e3e8f0;padding-top:6px;font-size:13px}
+.gtab .gis{font-size:12px;color:#1F3864}
+.gstd{border-top:1px solid #e3e8f0;padding:8px 0}
+.gstd:first-child{border-top:0}
+@media (max-width:640px){.gtab .gh{display:none}.gtab .gr{grid-template-columns:44px 1fr 1fr;}.gtab .gr>span:nth-child(2){grid-column:2/-1}.gtab .gis{grid-column:1/-1}}

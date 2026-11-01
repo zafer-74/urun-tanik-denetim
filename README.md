@@ -35,6 +35,7 @@ Bir denetimde iki mevzuattan modül seçilirse her mevzuatın ortak şartları a
 - Tanık planı (EA-2/17 Annex B Tablo 2 gruplaması)
 - Otomatik özet ve bulgu listesi
 - **TÜRKAK F701-062 Rev.03** (Ürün Belgelendirme Kuruluşları için Tanık Denetim Raporu) formunun uygulama içinde doldurulması ve resmî şablon üzerine işlenmiş **Word (.docx)** çıktısı; Bölüm 2.4 ve Bölüm 3 çeklist sonuçlarından otomatik önerilir
+- **(AB) 2023/1230 Geçiş Denetim Raporu** (GD çeklisti için; F701-062 yerine): genel bilgiler, denetim özeti, uygunsuzluk/gözlem listeleri, kapsam eşleştirme (E/H seçimi ve otomatik TÜRKAK işlemi), standart boşluk analizi, tüm kontrol listesi sonuçları, kapsam önerisi, tanık takibi (18 ay) ve sonuç — Word (.docx) çıktısı; şablon `report/Gecis_Denetim_Raporu_sablon.docx` (`tools/gecis_sablon.js` ile üretilir)
 - Excel (.xlsx) dışa aktarma, yazdır / PDF, JSON yedek ve içe aktarma (cihazlar arası aktarım, fotoğraflar dahil)
 - Tamamen çevrimdışı; veriler yalnız cihazda (IndexedDB) saklanır
 

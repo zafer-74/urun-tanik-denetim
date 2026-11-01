@@ -203,7 +203,8 @@ function editInfo(a) {
     if (isNew) { A = { id: uid(), created: new Date().toISOString(), info: inf, modules: mods, answers: {}, tanik: {} }; }
     else { A.info = inf; A.modules = D.modules.map(m => m.id).filter(id => mods.includes(id)); }
     if (isNew) tab = "kapak";
-    else if (A.f62 && A.f62.g) { const g = A.f62.g; g.udk = inf.kurulus; g.tur = inf.tur; g.bas = inf.tarih; g.denetci = inf.basDenetci; g.uzman = inf.uzman; }
+    if (!isNew && A.gec && A.gec.g) { const g = A.gec.g; g.kurulus = inf.kurulus; g.bas = inf.tarih; g.yer = inf.yer; g.basDenetci = inf.basDenetci; }
+    if (!isNew && A.f62 && A.f62.g) { const g = A.f62.g; g.udk = inf.kurulus; g.tur = inf.tur; g.bas = inf.tarih; g.denetci = inf.basDenetci; g.uzman = inf.uzman; }
     await saveNow(); openAudit(A.id);
   };
 }
@@ -219,7 +220,8 @@ function renderAudit() {
   setBar(A.info.kurulus || "Denetim", (A.info.tarih || "") + " · " + A.modules.map(id => MOD[id].code).join(", "), true);
   const sh = sheetsOf(A);
   const tabs = [{ id: "kapak", t: "Kapak" }, ...sh.map(s => { const st = stats(A, s); return { id: s.id, t: (s.mod ? s.mod.code + " " : "") + s.ad, sub: st.done + "/" + st.n }; }),
-    { id: "tanik", t: "Tanık planı" }, { id: "ozet", t: "Özet ve bulgular" }, { id: "f62", t: "F701-062 Rapor" }];
+    { id: "tanik", t: "Tanık planı" }, { id: "ozet", t: "Özet ve bulgular" }, ...(hasGecis(A) ? [{ id: "gr", t: "Geçiş Raporu" }] : []), ...(gecisOnly(A) ? [] : [{ id: "f62", t: "F701-062 Rapor" }])];
+  if ((tab === "f62" && gecisOnly(A)) || (tab === "gr" && !hasGecis(A))) tab = "ozet";
   const v = $("#view");
   let lastG = null;
   v.innerHTML = `<nav class="tabs">${tabs.map(x => { const m = MOD[x.id]; let pre = "";
@@ -230,8 +232,9 @@ function renderAudit() {
   const on = v.querySelector(".tab.on"); if (on) on.scrollIntoView({ inline: "center", block: "nearest" });
   if (tab === "ozet") return renderSummary();
   if (tab === "tanik") return renderTanik();
+  if (tab === "gr") return renderGecis();
   if (tab === "f62") return renderF62();
-  if (tab === "kapak") return renderKapak();
+  if (tab === "kapak") return gecisOnly(A) ? renderGecisKapak() : renderKapak();
   renderSheet(sh.find(s => s.id === tab) || sh[0]);
 }
 
@@ -455,13 +458,13 @@ function printReport() {
 $("#btnMenu").onclick = e => {
   e.stopPropagation(); const m = $("#menu");
   if (!m.hidden) return (m.hidden = true);
-  m.innerHTML = `<button data-a="info">✎ Denetim bilgileri ve modüller</button><button data-a="xl">⬇ Excel'e aktar</button><button data-a="pr">🖨 Yazdır / PDF</button><button data-a="f62">⬇ F701-062 tanık raporu (Word)</button>
+  m.innerHTML = `<button data-a="info">✎ Denetim bilgileri ve modüller</button><button data-a="xl">⬇ Excel'e aktar</button><button data-a="pr">🖨 Yazdır / PDF</button>${gecisOnly(A) ? "" : `<button data-a="f62">⬇ F701-062 tanık raporu (Word)</button>`}${hasGecis(A) ? `<button data-a="gr">⬇ 2023/1230 geçiş denetim raporu (Word)</button>` : ""}
     <button data-a="js">⬇ JSON yedeği (cihaz aktarımı)</button><button data-a="dup">⧉ Denetimi kopyala (boş çeklist)</button><button class="d" data-a="del">🗑 Denetimi sil</button><button data-a="exit">⏻ Programdan çık</button>`;
   m.hidden = false;
   m.querySelectorAll("button").forEach(b => b.onclick = async () => {
     m.hidden = true; const a = b.dataset.a;
     if (a === "info") editInfo(A);
-    if (a === "f62") exportF62(); if (a === "xl") exportXlsx(); if (a === "pr") printReport(); if (a === "js") exportJson();
+    if (a === "f62") exportF62(); if (a === "gr") exportGecis(); if (a === "xl") exportXlsx(); if (a === "pr") printReport(); if (a === "js") exportJson();
     if (a === "dup") { const n = { ...A, id: uid(), created: new Date().toISOString(), answers: {}, tanik: {}, info: { ...A.info, kurulus: (A.info.kurulus || "") + " (yeni)" } }; A = n; await saveNow(); openAudit(n.id); toast("Boş kopya oluşturuldu"); }
     if (a === "del") deleteAudit(A);
     if (a === "exit") exitApp();
