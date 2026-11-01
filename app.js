@@ -100,7 +100,7 @@ async function home() {
       <button class="btn sec sm" id="imp">JSON içe aktar</button></div>
     ${list.length ? "" : `<div class="empty">Henüz denetim yok. Aşağıdaki <b>Yeni denetim</b> bölümünden bir modüle dokunarak başlayın.</div>`}
     <div id="alist"></div>
-    <h2>Yeni denetim</h2><div class="muted" style="margin:-4px 0 8px">Denetlenecek modüle dokunun — denetim hemen açılır. Grup başlığı o gruptaki tüm modüllerle, yönetmelik başlığı 10 modülün tamamıyla açar. Birden fazla modülü seçerek açmak için <b>+ Yeni denetim</b>.</div>${launchTree()}
+    <h2>Yeni denetim</h2><div class="muted" style="margin:-4px 0 8px">Yönetmeliğe, ardından ürün grubuna dokunun; açılan modüllerden birine dokunduğunuzda denetim başlar. Birden fazla modülü birlikte denetlemek için <b>+ Yeni denetim</b>.</div>${launchTree()}
     <div class="installhint" id="ih"><b>Kurulum:</b> Windows (Edge/Chrome): adres çubuğundaki <i>Uygulamayı yükle</i> simgesi ·
       iPhone/iPad (Safari): Paylaş → <i>Ana Ekrana Ekle</i> · Android (Chrome): ⋮ → <i>Uygulamayı yükle</i>.
       Kurulduktan sonra internet olmadan çalışır; veriler yalnız bu cihazda saklanır — cihazlar arası aktarım için JSON yedeğini kullanın.</div>
@@ -120,12 +120,8 @@ async function home() {
   });
   $("#new").onclick = () => editInfo(null);
   $("#btnUpd").onclick = () => doUpdate();
-  document.querySelectorAll(".launch .go").forEach(b => b.onclick = () => {
-    const mods = b.dataset.m.split(",");
-    const ad = mods.length === 1 ? MOD[mods[0]].code + " " + MOD[mods[0]].ad : mods.length + " modül";
-    if (mods.length > 1 && !confirm(ad + " ile yeni denetim açılsın mı?")) return;
-    startAudit(mods);
-  });
+  document.querySelectorAll(".launch .go").forEach(b => b.onclick = () => startAudit([b.dataset.m]));
+  document.querySelectorAll(".launch details").forEach(dt => dt.addEventListener("toggle", () => { if (dt.open) setTimeout(() => dt.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50); }));
   $("#imp").onclick = () => $("#fileImport").click();
 }
 
@@ -149,10 +145,10 @@ const YON = { ad: "2014/33/AB Asansör Yönetmeliği", alt: "Asansörler ve asan
 function launchTree() {
   const ms = g => D.modules.filter(m => m.grup === g.id);
   return `<div class="tree launch">
-    <button class="tr0 go" data-m="${D.modules.map(m => m.id).join(",")}"><div class="grow"><b>${YON.ad}</b><div class="muted">${YON.alt} · ${D.modules.length} modül · tüm modüllerle denetim</div></div><span class="arr">›</span></button>
-    ${YON.gruplar.map(g => `<div class="tr1"><button class="go grp" data-m="${ms(g).map(m => m.id).join(",")}"><div class="grow"><b>${g.ad}</b> <span class="muted">${g.md} · ${ms(g).length} modül</span></div><span class="arr">›</span></button>
-      <div class="tr2">${ms(g).map(m => `<button class="go" data-m="${m.id}"><div class="grow"><b>${m.code}</b> ${esc(m.ad)}<div class="muted">${m.items.length} madde + ${D.ortak.length} ortak şart</div></div><span class="arr">›</span></button>`).join("")}</div></div>`).join("")}
-  </div>`;
+    <details class="lv0"><summary><div class="grow"><b>${YON.ad}</b><div class="muted">${YON.alt} · ${D.modules.length} modül</div></div><span class="arr">›</span></summary>
+    ${YON.gruplar.map(g => `<details class="lv1"><summary><div class="grow"><b>${g.ad}</b><div class="muted">${g.md} · ${ms(g).length} modül</div></div><span class="arr">›</span></summary>
+      <div class="lv2">${ms(g).map(m => `<button class="go" data-m="${m.id}"><div class="grow"><b>${m.code}</b> ${esc(m.ad)}<div class="muted">${m.items.length} madde + ${D.ortak.length} ortak şart · dokunun, denetim açılsın</div></div><span class="plus">＋</span></button>`).join("")}</div></details>`).join("")}
+    </details></div>`;
 }
 async function startAudit(mods) {
   A = { id: uid(), created: new Date().toISOString(), info: { tarih: new Date().toISOString().slice(0, 10), tur: "Tanık denetimi" }, modules: D.modules.map(m => m.id).filter(id => mods.includes(id)), answers: {}, tanik: {} };

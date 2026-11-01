@@ -121,10 +121,17 @@ table.sum tr.tot td{background:var(--light);font-weight:700}
 .delbtn{flex:0 0 auto;background:#fff;border:1px solid var(--line);border-radius:8px;width:36px;height:36px;cursor:pointer;font-size:16px}
 .delbtn:hover{border-color:var(--UY);background:#fdecea}
 
-.launch .go{display:flex;width:100%;align-items:center;gap:10px;text-align:left;background:#fff;border:1px solid transparent;border-radius:10px;padding:10px 10px;cursor:pointer;margin:2px 0}
+.launch{padding:4px}
+.launch summary{list-style:none;display:flex;align-items:center;gap:10px;cursor:pointer;padding:12px 10px;border-radius:10px;-webkit-tap-highlight-color:transparent}
+.launch summary::-webkit-details-marker{display:none}
+.launch summary:hover{background:var(--bg)}
+.launch .arr{font-size:24px;color:var(--blue);line-height:1;transition:transform .2s}
+.launch details[open]>summary>.arr{transform:rotate(90deg)}
+.launch .lv0>summary b{color:var(--navy);font-size:16px}
+.launch .lv0[open]>summary{border-bottom:1px solid var(--line);border-radius:10px 10px 0 0}
+.launch .lv1{margin:6px 0 6px 14px;border-left:3px solid var(--light);padding-left:6px}
+.launch .lv1>summary b{color:var(--blue);font-size:15px}
+.launch .lv2{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:4px 8px;margin:2px 0 8px 14px}
+.launch .go{display:flex;width:100%;align-items:center;gap:10px;text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer}
 .launch .go:hover,.launch .go:active{background:var(--light);border-color:var(--blue)}
-.launch .go .arr{font-size:22px;color:var(--blue);line-height:1}
-.launch .tr0{border-bottom:1px solid var(--line);border-radius:10px 10px 0 0}
-.launch .tr1{margin:6px 0 6px 14px;border-left:3px solid var(--light);padding-left:6px}
-.launch .grp b{color:var(--blue)}
-.launch .tr2{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:2px 8px;margin-left:16px}
+.launch .plus{flex:0 0 auto;width:30px;height:30px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px}
