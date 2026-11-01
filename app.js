@@ -98,9 +98,9 @@ async function home() {
       <button class="btn ${UPD.yeni ? "" : "sec"} sm" id="btnUpd">⟳ Güncelle</button></div>
     <div class="row"><h2 class="grow">Denetimler</h2>
       <button class="btn sec sm" id="imp">JSON içe aktar</button></div>
-    ${list.length ? "" : `<div class="empty">Henüz denetim yok. Sağ alttaki <b>+ Yeni denetim</b> ile başlayın.</div>`}
+    ${list.length ? "" : `<div class="empty">Henüz denetim yok. Aşağıdaki <b>Yeni denetim</b> bölümünden bir modüle dokunarak başlayın.</div>`}
     <div id="alist"></div>
-    <h2>Kapsam</h2>${modTree([], true)}
+    <h2>Yeni denetim</h2><div class="muted" style="margin:-4px 0 8px">Denetlenecek modüle dokunun — denetim hemen açılır. Grup başlığı o gruptaki tüm modüllerle, yönetmelik başlığı 10 modülün tamamıyla açar. Birden fazla modülü seçerek açmak için <b>+ Yeni denetim</b>.</div>${launchTree()}
     <div class="installhint" id="ih"><b>Kurulum:</b> Windows (Edge/Chrome): adres çubuğundaki <i>Uygulamayı yükle</i> simgesi ·
       iPhone/iPad (Safari): Paylaş → <i>Ana Ekrana Ekle</i> · Android (Chrome): ⋮ → <i>Uygulamayı yükle</i>.
       Kurulduktan sonra internet olmadan çalışır; veriler yalnız bu cihazda saklanır — cihazlar arası aktarım için JSON yedeğini kullanın.</div>
@@ -120,6 +120,12 @@ async function home() {
   });
   $("#new").onclick = () => editInfo(null);
   $("#btnUpd").onclick = () => doUpdate();
+  document.querySelectorAll(".launch .go").forEach(b => b.onclick = () => {
+    const mods = b.dataset.m.split(",");
+    const ad = mods.length === 1 ? MOD[mods[0]].code + " " + MOD[mods[0]].ad : mods.length + " modül";
+    if (mods.length > 1 && !confirm(ad + " ile yeni denetim açılsın mı?")) return;
+    startAudit(mods);
+  });
   $("#imp").onclick = () => $("#fileImport").click();
 }
 
@@ -140,6 +146,18 @@ function infoFields(info) {
 }
 const YON = { ad: "2014/33/AB Asansör Yönetmeliği", alt: "Asansörler ve asansör güvenlik aksamları",
   gruplar: [{ id: "aksam", ad: "Güvenlik Aksamları", md: "Md. 15 · Ek IV-A, VI, VII, IX" }, { id: "asansor", ad: "Asansör", md: "Md. 16 · Ek IV-B, V, VIII, X, XI, XII" }] };
+function launchTree() {
+  const ms = g => D.modules.filter(m => m.grup === g.id);
+  return `<div class="tree launch">
+    <button class="tr0 go" data-m="${D.modules.map(m => m.id).join(",")}"><div class="grow"><b>${YON.ad}</b><div class="muted">${YON.alt} · ${D.modules.length} modül · tüm modüllerle denetim</div></div><span class="arr">›</span></button>
+    ${YON.gruplar.map(g => `<div class="tr1"><button class="go grp" data-m="${ms(g).map(m => m.id).join(",")}"><div class="grow"><b>${g.ad}</b> <span class="muted">${g.md} · ${ms(g).length} modül</span></div><span class="arr">›</span></button>
+      <div class="tr2">${ms(g).map(m => `<button class="go" data-m="${m.id}"><div class="grow"><b>${m.code}</b> ${esc(m.ad)}<div class="muted">${m.items.length} madde + ${D.ortak.length} ortak şart</div></div><span class="arr">›</span></button>`).join("")}</div></div>`).join("")}
+  </div>`;
+}
+async function startAudit(mods) {
+  A = { id: uid(), created: new Date().toISOString(), info: { tarih: new Date().toISOString().slice(0, 10), tur: "Tanık denetimi" }, modules: D.modules.map(m => m.id).filter(id => mods.includes(id)), answers: {}, tanik: {} };
+  await saveNow(); tab = A.modules[0]; openAudit(A.id); toast("Yeni denetim açıldı — kuruluş bilgilerini girmeyi unutmayın", 3500);
+}
 function modTree(sel, readonly) {
   const mods = g => D.modules.filter(m => m.grup === g.id);
   const box = (cls, val, on, extra = "") => readonly ? "" : `<input type="checkbox" class="${cls}" ${val ? `value="${val}"` : ""} ${on ? "checked" : ""} ${extra}>`;
@@ -213,6 +231,7 @@ function renderSheet(sheet) {
   const m = sheet.mod;
   const st = stats(A, sheet);
   let html = "";
+  if (!A.info.kurulus) html += `<div class="card row" style="border-color:var(--K);background:#fffbea"><div class="grow"><b>Denetim bilgileri eksik</b><div class="muted">Kuruluş adı, NANDO no, denetçi gibi bilgileri girin.</div></div><button class="btn sm" id="goInfo">✎ Bilgileri gir</button></div>`;
   if (m) html += `<details class="card kunye" ${st.done ? "" : "open"}><summary><b>${esc(m.baslik)}</b></summary>${m.ozet.map(([l, x]) => `<div><b>${esc(l)}</b><span>${esc(x)}</span></div>`).join("")}</details>`;
   else html += `<div class="card muted">Kuruluş düzeyinde bir kez değerlendirilir; modül sayfaları bu maddeleri tekrar etmez.</div>`;
   html += `<div class="tools">
@@ -220,6 +239,7 @@ function renderSheet(sheet) {
     <input class="search" placeholder="Ara (madde, dayanak…)" value="${esc(q)}">
     <span class="muted">${st.done}/${st.n} · %${st.pct}</span></div><div id="items"></div>`;
   p.innerHTML = html;
+  if ($("#goInfo")) $("#goInfo").onclick = () => editInfo(A);
   p.querySelectorAll(".chip").forEach(c => c.onclick = () => { filt = c.dataset.f; renderSheet(sheet); });
   const si = p.querySelector(".search"); si.oninput = () => { q = si.value; drawItems(sheet); };
   drawItems(sheet);
