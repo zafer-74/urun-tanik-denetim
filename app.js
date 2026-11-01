@@ -69,6 +69,8 @@ async function home() {
   const list = (await DB.all("audits")).sort((x, y) => (y.updated || "").localeCompare(x.updated || ""));
   const v = $("#view");
   v.innerHTML = `
+    <div class="card row" id="upd"><div class="grow"><b>Sürüm ${esc(D.surum)}</b><div class="muted" id="updMsg">${UPD.yeni ? "Yeni sürüm hazır: " + esc(UPD.yeni) : "Güncellemeleri denetlemek için dokunun"}</div></div>
+      <button class="btn ${UPD.yeni ? "" : "sec"} sm" id="btnUpd">⟳ Güncelle</button></div>
     <div class="row"><h2 class="grow">Denetimler</h2>
       <button class="btn sec sm" id="imp">JSON içe aktar</button></div>
     ${list.length ? "" : `<div class="empty">Henüz denetim yok. Sağ alttaki <b>+ Yeni denetim</b> ile başlayın.</div>`}
@@ -89,6 +91,7 @@ async function home() {
     d.onclick = () => openAudit(a.id); al.appendChild(d);
   });
   $("#new").onclick = () => editInfo(null);
+  $("#btnUpd").onclick = () => doUpdate();
   $("#imp").onclick = () => $("#fileImport").click();
 }
 
@@ -406,10 +409,40 @@ document.addEventListener("click", () => { $("#menu").hidden = true; });
 $("#btnBack").onclick = async () => { await saveNow(); if (A && $("#view .tabs")) home(); else if (A) openAudit(A.id); else home(); };
 window.addEventListener("beforeunload", () => { if (saveTimer) saveNow(); });
 
+/* ---------- Güncelleme ---------- */
+const UPD = { yeni: null };
+async function remoteVersion() {
+  const r = await fetch("data.js?t=" + Date.now(), { cache: "no-store" });
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  const m = /"surum":\s*"([^"]+)"/.exec(await r.text()); return m ? m[1] : null;
+}
+async function doUpdate() {
+  const msg = $("#updMsg"), btn = $("#btnUpd");
+  if (!navigator.onLine) return toast("İnternet bağlantısı yok — güncelleme için bağlanın");
+  btn.disabled = true; if (msg) msg.textContent = "Denetleniyor…";
+  try {
+    if (saveTimer) await saveNow();
+    const rv = await remoteVersion();
+    if (rv && rv === D.surum) { if (msg) msg.textContent = "Uygulama güncel"; toast("Uygulama güncel (v" + D.surum + ")"); btn.disabled = false; return; }
+    if (msg) msg.textContent = "Yeni sürüm indiriliyor: " + (rv || "");
+    const reg = "serviceWorker" in navigator ? await navigator.serviceWorker.getRegistration() : null;
+    if (reg) await reg.update().catch(() => {});
+    if (window.caches) for (const k of await caches.keys()) await caches.delete(k);
+    toast("Güncelleniyor… veriler korunur");
+    setTimeout(() => location.reload(), 600);
+  } catch (e) { if (msg) msg.textContent = "Denetlenemedi"; toast("Güncelleme denetlenemedi: " + e.message); btn.disabled = false; }
+}
+async function silentCheck() {
+  try { if (!navigator.onLine) return; const rv = await remoteVersion();
+    if (rv && rv !== D.surum) { UPD.yeni = rv; const m = $("#updMsg"), b = $("#btnUpd"); if (m) m.textContent = "Yeni sürüm hazır: " + rv; if (b) b.classList.remove("sec"); toast("Yeni sürüm var — ana ekrandan Güncelle'ye dokunun", 4000); }
+  } catch {}
+}
+
 /* ---------- Başlat ---------- */
 (async () => {
   try { await DB.open(); } catch { $("#view").innerHTML = `<div class="empty">Tarayıcı depolaması açılamadı (gizli sekme olabilir).</div>`; return; }
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
   home();
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  setTimeout(silentCheck, 1500);
 })();
