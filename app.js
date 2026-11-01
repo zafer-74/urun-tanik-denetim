@@ -73,10 +73,7 @@ async function home() {
       <button class="btn sec sm" id="imp">JSON içe aktar</button></div>
     ${list.length ? "" : `<div class="empty">Henüz denetim yok. Sağ alttaki <b>+ Yeni denetim</b> ile başlayın.</div>`}
     <div id="alist"></div>
-    <h2>Modüller</h2>
-    <div class="card muted">Güvenlik aksamları (Md. 15): ${D.modules.filter(m => m.grup === "aksam").map(m => `<b>${m.code}</b> ${esc(m.ad)}`).join(" · ")}<br>
-    Asansörler (Md. 16): ${D.modules.filter(m => m.grup === "asansor").map(m => `<b>${m.code}</b> ${esc(m.ad)}`).join(" · ")}<br>
-    Her denetimde ayrıca ${D.ortak.length} maddelik Ortak Şartlar (Md. 24, 26, 30, 32–34, 36) yer alır.</div>
+    <h2>Kapsam</h2>${modTree([], true)}
     <div class="installhint" id="ih"><b>Kurulum:</b> Windows (Edge/Chrome): adres çubuğundaki <i>Uygulamayı yükle</i> simgesi ·
       iPhone/iPad (Safari): Paylaş → <i>Ana Ekrana Ekle</i> · Android (Chrome): ⋮ → <i>Uygulamayı yükle</i>.
       Kurulduktan sonra internet olmadan çalışır; veriler yalnız bu cihazda saklanır — cihazlar arası aktarım için JSON yedeğini kullanın.</div>
@@ -110,11 +107,32 @@ function infoFields(info) {
     return `<label class="f"><span>${l}</span><input class="t" data-k="${k}" type="${t === "date" ? "date" : "text"}" value="${v}"></label>`;
   }).join("")}</div>`;
 }
-function modPicker(sel) {
-  const g = (grup, title) => `<h2>${title}</h2><div class="modpick">${D.modules.filter(m => m.grup === grup).map(m =>
-    `<label><input type="checkbox" value="${m.id}" ${sel.includes(m.id) ? "checked" : ""}><div><b>${m.code}</b> ${esc(m.ad)}<div class="muted">${m.items.length} madde</div></div></label>`).join("")}</div>`;
-  return g("aksam", "Güvenlik aksamı modülleri (Md. 15)") + g("asansor", "Asansör modülleri (Md. 16)");
+const YON = { ad: "2014/33/AB Asansör Yönetmeliği", alt: "Asansörler ve asansör güvenlik aksamları",
+  gruplar: [{ id: "aksam", ad: "Güvenlik Aksamları", md: "Md. 15 · Ek IV-A, VI, VII, IX" }, { id: "asansor", ad: "Asansör", md: "Md. 16 · Ek IV-B, V, VIII, X, XI, XII" }] };
+function modTree(sel, readonly) {
+  const mods = g => D.modules.filter(m => m.grup === g.id);
+  const box = (cls, val, on, extra = "") => readonly ? "" : `<input type="checkbox" class="${cls}" ${val ? `value="${val}"` : ""} ${on ? "checked" : ""} ${extra}>`;
+  const allOn = D.modules.every(m => sel.includes(m.id));
+  return `<div class="tree">
+    <label class="tr0">${box("cb-yon", "", allOn)}<div><b>${YON.ad}</b><div class="muted">${YON.alt} · ${D.modules.length} modül · her denetimde ayrıca ${D.ortak.length} maddelik Ortak Şartlar</div></div></label>
+    ${YON.gruplar.map(g => { const ms = mods(g); const on = ms.every(m => sel.includes(m.id));
+      return `<details class="tr1" open><summary><label onclick="event.stopPropagation()">${box("cb-grp", "", on, `data-g="${g.id}"`)}<div><b>${g.ad}</b> <span class="muted">${g.md} · ${ms.length} modül</span></div></label></summary>
+      <div class="tr2">${ms.map(m => `<label>${box("cb-mod", m.id, sel.includes(m.id), `data-g="${g.id}"`)}<div><b>${m.code}</b> ${esc(m.ad)}<div class="muted">${m.items.length} madde</div></div></label>`).join("")}</div></details>`; }).join("")}
+  </div>`;
 }
+function bindTree(root) {
+  const sync = () => {
+    YON.gruplar.forEach(g => { const ms = [...root.querySelectorAll(`.cb-mod[data-g="${g.id}"]`)]; const gb = root.querySelector(`.cb-grp[data-g="${g.id}"]`);
+      const n = ms.filter(x => x.checked).length; gb.checked = n === ms.length; gb.indeterminate = n > 0 && n < ms.length; });
+    const all = [...root.querySelectorAll(".cb-mod")]; const n = all.filter(x => x.checked).length; const y = root.querySelector(".cb-yon");
+    y.checked = n === all.length; y.indeterminate = n > 0 && n < all.length;
+  };
+  root.querySelector(".cb-yon").onchange = e => { root.querySelectorAll(".cb-mod").forEach(x => x.checked = e.target.checked); sync(); };
+  root.querySelectorAll(".cb-grp").forEach(gb => gb.onchange = () => { root.querySelectorAll(`.cb-mod[data-g="${gb.dataset.g}"]`).forEach(x => x.checked = gb.checked); sync(); });
+  root.querySelectorAll(".cb-mod").forEach(x => x.onchange = sync);
+  sync();
+}
+function modPicker(sel) { return `<h2>Denetlenecek modüller</h2>${modTree(sel, false)}`; }
 function editInfo(a) {
   const isNew = !a;
   const info = a ? a.info : { tarih: new Date().toISOString().slice(0, 10) };
@@ -122,9 +140,10 @@ function editInfo(a) {
   setBar(isNew ? "Yeni denetim" : "Denetim bilgileri", "", true);
   $("#view").innerHTML = `<div class="card">${infoFields(info)}</div>${modPicker(sel)}
     <div class="row" style="margin-top:16px"><button class="btn" id="ok">${isNew ? "Denetimi başlat" : "Kaydet"}</button></div>`;
+  bindTree($(".tree"));
   $("#ok").onclick = async () => {
     const inf = {}; document.querySelectorAll("[data-k]").forEach(e => inf[e.dataset.k] = e.value.trim());
-    const mods = [...document.querySelectorAll(".modpick input:checked")].map(e => e.value);
+    const mods = [...document.querySelectorAll(".tree .cb-mod:checked")].map(e => e.value);
     if (!mods.length) return toast("En az bir modül seçin");
     if (isNew) { A = { id: uid(), created: new Date().toISOString(), info: inf, modules: mods, answers: {}, tanik: {} }; }
     else { A.info = inf; A.modules = D.modules.map(m => m.id).filter(id => mods.includes(id)); }
@@ -145,7 +164,11 @@ function renderAudit() {
   const tabs = [...sh.map(s => { const st = stats(A, s); return { id: s.id, t: (s.mod ? s.mod.code + " " : "") + s.ad, sub: st.done + "/" + st.n }; }),
     { id: "tanik", t: "Tanık planı" }, { id: "ozet", t: "Özet ve bulgular" }, { id: "f62", t: "F701-062 Rapor" }];
   const v = $("#view");
-  v.innerHTML = `<nav class="tabs">${tabs.map(x => `<button class="tab ${x.id === tab ? "on" : ""}" data-t="${x.id}">${esc(x.t)}${x.sub ? `<small>${x.sub}</small>` : ""}</button>`).join("")}</nav><div id="pane"></div>`;
+  let lastG = null;
+  v.innerHTML = `<nav class="tabs">${tabs.map(x => { const m = MOD[x.id]; let pre = "";
+    if (m && m.grup !== lastG) { lastG = m.grup; pre = `<span class="tabgrp">${m.grup === "aksam" ? "Güvenlik Aksamları" : "Asansör"} ›</span>`; }
+    else if (!m && lastG && x.id === "tanik") { lastG = null; pre = `<span class="tabgrp">│</span>`; }
+    return pre + `<button class="tab ${x.id === tab ? "on" : ""}" data-t="${x.id}">${esc(x.t)}${x.sub ? `<small>${x.sub}</small>` : ""}</button>`; }).join("")}</nav><div id="pane"></div>`;
   v.querySelectorAll(".tab").forEach(b => b.onclick = () => { tab = b.dataset.t; renderAudit(); window.scrollTo(0, 0); });
   const on = v.querySelector(".tab.on"); if (on) on.scrollIntoView({ inline: "center", block: "nearest" });
   if (tab === "ozet") return renderSummary();

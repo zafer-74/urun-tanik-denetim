@@ -102,3 +102,18 @@ table.sum tr.tot td{background:var(--light);font-weight:700}
   .printonly{display:block!important}
 }
 .printonly{display:none}
+
+.tree{background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+.tree label{display:flex;gap:10px;align-items:flex-start;cursor:pointer;padding:8px 6px;border-radius:8px}
+.tree label:hover{background:var(--bg)}
+.tree input{width:20px;height:20px;margin-top:2px;flex:0 0 auto;accent-color:var(--navy)}
+.tree .tr0{border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:4px}
+.tree .tr0 b{color:var(--navy);font-size:16px}
+.tree .tr1{margin:4px 0 4px 18px;border-left:3px solid var(--light);padding-left:8px}
+.tree .tr1>summary{list-style:none;cursor:pointer;display:flex;align-items:center}
+.tree .tr1>summary::-webkit-details-marker{display:none}
+.tree .tr1>summary::before{content:"▸";color:var(--blue);margin-right:2px;transition:transform .15s}
+.tree .tr1[open]>summary::before{transform:rotate(90deg)}
+.tree .tr1>summary b{color:var(--blue)}
+.tree .tr2{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:2px 8px;margin-left:22px}
+.tabgrp{flex:0 0 auto;align-self:center;font-size:11px;font-weight:700;color:var(--blue);padding:0 2px 0 6px;white-space:nowrap}
