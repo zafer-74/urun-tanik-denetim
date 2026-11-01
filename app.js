@@ -374,7 +374,7 @@ function exportXlsx() {
   const info = [["F701-062 — Ürün Belgelendirme Kuruluşları için Tanık Denetim Raporu — Kapak / Bölüm 1 Genel Bilgiler"], ["Uygulama sürümü", D.surum], [],
     ["Dosya No", "AB-" + (G.dosya1 || "") + (G.dosya2 ? "-" + G.dosya2 : "")], ["Denetim No", G.no || ""], ["Denetim tarihi", (G.bas || "") + " – " + (G.bit || "")],
     ["UDK adı", G.udk || ""], ["Denetim türü", turText(G)], ["Kapsam genişletme", G.kg ? "Evet" : "Hayır"],
-    ...R.ekip.filter(e => e.ad || e.soyad).map((e, n) => ["BK tetkik ekibi " + (n + 1), [e.ad, e.soyad].filter(Boolean).join(" ") + (e.gorev ? " — " + e.gorev : "")]),
+    ...R.ekip.filter(e => e.ad || e.soyad).map((e, n) => ["BK tetkik ekibi " + (n + 1), [e.ad, e.soyad].filter(Boolean).join(" ") + (e.gorev ? " — " + e.gorev : "") + (e.meslek ? " — " + e.meslek : "")]),
     ["BK müşterisi ve adresi", G.musteri || ""], ["Tetkikte kullanılan dokümanlar", dokListe(R)], ["Dış kaynak", G.diskaynak || ""], ["Esas standart / yönetmelik / program", G.standart || ""], ["Tanıklık kapsamı", G.kapsam || ""],
     [], ["Modüller", A.modules.map(id => MOD[id].code + " " + MOD[id].ad).join("; ")], ["NANDO / akreditasyon no", [A.info.nando, A.info.akrNo].filter(Boolean).join(" / ")],
     ["Denetçi", G.denetci || ""], ["Teknik uzman", G.uzman || ""], [], ["Kodlar", CODES.map(c => c + " = " + CODE_TXT[c]).join(" · ")]];

@@ -11,12 +11,15 @@ function turNorm(v) {               // eski serbest metin değerlerini form list
   return m ? F62_TUR[m[1]] : v;
 }
 function turText(g) { return g.tur === "Diğer / Other" && g.turDiger ? "Diğer / Other – " + g.turDiger : (g.tur || ""); }
+const F62_MESLEK = ["Makine Mühendisi", "Elektrik Mühendisi", "Elektrik-Elektronik Mühendisi", "Mekatronik Mühendisi", "Endüstri Mühendisi",
+  "Makine Teknikeri", "Elektrik Teknikeri", "Asansör Teknikeri", "Fizik Mühendisi"];
 const F62_ROL = ["Baş Tetkikçi", "Tetkikçi", "Teknik Uzman", "Stajyer Tetkikçi", "Gözlemci", "Karar Verici"];
 
 function f62() {
   A.f62 = A.f62 || {};
   const r = A.f62;
-  r.g = r.g || {}; r.c = r.c || {}; r.ekip = r.ekip || [{}, {}, {}, {}]; r.dok = r.dok || [{}];
+  r.g = r.g || {}; r.c = r.c || {}; if (!r.ekipV2) { r.ekip = (r.ekip || []).filter(e => e && (e.ad || e.soyad || e.gorev || e.meslek)); r.ekipV2 = 1; }
+  if (!r.ekip.length) r.ekip.push({}); r.dok = r.dok || [{}];
   const i = A.info;
   if (r.g.udk === undefined) r.g.udk = i.kurulus || "";
   if (r.g.tur === undefined) r.g.tur = i.tur || "";
@@ -148,7 +151,8 @@ async function exportF62() {
     SONUC: g.sonuc, UYGUNSUZLUK: g.uyg, ONERI: g.oneri, DENETCI: g.denetci, DTARIH: trDate(g.dtarih), UZMAN: g.uzman, UTARIH: trDate(g.utarih),
     K_KG: g.kg ? "1" : "0", C_KG: g.kg ? "☒" : "☐",
   };
-  r.ekip.forEach((e, n) => { V[`T${n + 1}_AD`] = e.ad; V[`T${n + 1}_SOYAD`] = e.soyad; V[`T${n + 1}_GOREV`] = e.gorev; });
+  const ekip = r.ekip.filter(e => e.ad || e.soyad || e.gorev || e.meslek);
+  ekip.forEach((e, n) => { V[`T${n + 1}_AD`] = e.ad; V[`T${n + 1}_SOYAD`] = e.soyad; V[`T${n + 1}_GOREV`] = [e.gorev, e.meslek ? "(" + e.meslek + ")" : ""].filter(Boolean).join("\n"); });
   window.F62.forEach(s => s.groups.forEach(gr => gr.items.forEach(it => {
     const c = r.c[it.id] || {};
     let e = c.e || "";
@@ -162,6 +166,12 @@ async function exportF62() {
     const files = Object.keys(zip.files).filter(f => /^word\/(document|header\d*|footer\d*)\.xml$/.test(f));
     for (const f of files) {
       let x = await zip.file(f).async("string");
+      if (f === "word/document.xml" && ekip.length > 4) {       // 4'ten fazla üye: 4. satırı çoğalt
+        const i = x.indexOf("{{T4_AD}}"), a = x.lastIndexOf("<w:tr>", i), b = x.indexOf("</w:tr>", i) + 7;
+        const row = x.slice(a, b); let extra = "";
+        for (let n = 5; n <= ekip.length; n++) extra += row.replace(/\{\{T4_/g, `{{T${n}_`);
+        x = x.slice(0, b) + extra + x.slice(b);
+      }
       x = x.replace(/\{\{([A-Z0-9_]+)\}\}/g, (m, k) => xmlText(V[k] ?? ""));
       zip.file(f, x);
     }
@@ -187,10 +197,16 @@ function f62B1Html(r) {
       ${g.tur === "Diğer / Other" ? `<input class="t" data-g="turDiger" placeholder="Denetim türünü yazın" value="${esc(g.turDiger || "")}" style="margin-top:6px">` : ""}</label>
     <label class="f"><span>Kapsam Genişletme / Scope Extension</span><label style="display:flex;gap:8px;align-items:center;padding:8px 0"><input type="checkbox" data-g="kg" ${g.kg ? "checked" : ""} style="width:20px;height:20px"> Evet</label></label>
   </div>
-  <div class="f"><span class="muted">BK Tetkik Ekibi Üyeleri ve Tetkikteki Rolü (en fazla 4)</span>
-  ${r.ekip.map((e, n) => `<div class="grid2" style="grid-template-columns:1fr 1fr 1fr;gap:6px;margin:4px 0">
-    <input class="t" data-e="${n}" data-x="ad" placeholder="Adı" value="${esc(e.ad || "")}"><input class="t" data-e="${n}" data-x="soyad" placeholder="Soyadı" value="${esc(e.soyad || "")}">
-    <input class="t" data-e="${n}" data-x="gorev" list="rol" placeholder="Görevi" value="${esc(e.gorev || "")}"></div>`).join("")}
+  <div class="ekip"><div class="ekhd"><b>BK Tetkik Ekibi Üyeleri ve Tetkikteki Rolü</b> <span class="muted">/ CB Audit Team Members and Role in The Audit</span></div>
+  <div class="ekhead"><span>Adı</span><span>Soyadı</span><span>Görevi</span><span>Mesleği</span><span></span></div>
+  ${r.ekip.map((e, n) => `<div class="ekrow">
+    <label class="dc"><i>Adı</i><input class="t" data-e="${n}" data-x="ad" placeholder="Adı" value="${esc(e.ad || "")}"></label>
+    <label class="dc"><i>Soyadı</i><input class="t" data-e="${n}" data-x="soyad" placeholder="Soyadı" value="${esc(e.soyad || "")}"></label>
+    <label class="dc"><i>Görevi</i><input class="t" data-e="${n}" data-x="gorev" list="rol" placeholder="Görevi" value="${esc(e.gorev || "")}"></label>
+    <label class="dc"><i>Mesleği</i><input class="t" data-e="${n}" data-x="meslek" list="meslek" placeholder="Mesleği" value="${esc(e.meslek || "")}"></label>
+    <button class="delbtn" data-ed="${n}" title="Üyeyi sil">✕</button></div>`).join("")}
+  <div class="row" style="margin-top:6px"><button class="btn sec sm" id="ekAdd">＋ Ekip üyesi ekle</button><span class="muted">${r.ekip.filter(e => e.ad || e.soyad).length} üye</span></div>
+  <datalist id="meslek">${F62_MESLEK.map(x => `<option value="${x}">`).join("")}</datalist>
   <datalist id="rol">${F62_ROL.map(x => `<option value="${x}">`).join("")}</datalist></div>
   <div class="grid2">${inp("musteri", "Belgelendirme Kuruluşu Müşterisi (Monte eden / İmalatçı) ve Adresi", "area", true)}
   ${inp("diskaynak", "Dış kaynak kullanımı (laboratuvar, muayene kuruluşu vb.) — adı ve adresi", "area", true)}
@@ -208,6 +224,11 @@ function bindF62B1(root, rerender) {
     markDirty();
   });
   root.querySelectorAll("[data-e]").forEach(e => e.oninput = () => { r.ekip[+e.dataset.e][e.dataset.x] = e.value; markDirty(); });
+  root.querySelectorAll("[data-ed]").forEach(b => b.onclick = () => { const n = +b.dataset.ed, e = r.ekip[n];
+    if ((e.ad || e.soyad) && !confirm(`${[e.ad, e.soyad].filter(Boolean).join(" ")} ekipten çıkarılsın mı?`)) return;
+    r.ekip.splice(n, 1); if (!r.ekip.length) r.ekip.push({}); markDirty(); rerender(); });
+  const ea = root.querySelector("#ekAdd"); if (ea) ea.onclick = () => { r.ekip.push({}); markDirty(); rerender();
+    setTimeout(() => { const ins = root.querySelectorAll('.ekrow input[data-x="ad"]'); ins[ins.length - 1]?.focus(); }, 30); };
   const b = root.querySelector("#f62std"); if (b) b.onclick = () => { g.standart = f62Standart(); g.kapsam = f62Kapsam(); markDirty(); rerender(); };
 }
 
