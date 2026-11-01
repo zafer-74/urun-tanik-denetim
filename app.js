@@ -374,7 +374,7 @@ function exportXlsx() {
     ["Dosya No", "AB-" + (G.dosya1 || "") + (G.dosya2 ? "-" + G.dosya2 : "")], ["Denetim No", G.no || ""], ["Denetim tarihi", (G.bas || "") + " – " + (G.bit || "")],
     ["UDK adı", G.udk || ""], ["Denetim türü", G.tur || ""], ["Kapsam genişletme", G.kg ? "Evet" : "Hayır"],
     ...R.ekip.filter(e => e.ad || e.soyad).map((e, n) => ["BK tetkik ekibi " + (n + 1), [e.ad, e.soyad].filter(Boolean).join(" ") + (e.gorev ? " — " + e.gorev : "")]),
-    ["BK müşterisi ve adresi", G.musteri || ""], ["Dış kaynak", G.diskaynak || ""], ["Esas standart / yönetmelik / program", G.standart || ""], ["Tanıklık kapsamı", G.kapsam || ""],
+    ["BK müşterisi ve adresi", G.musteri || ""], ["Tetkikte kullanılan dokümanlar", dokListe(R)], ["Dış kaynak", G.diskaynak || ""], ["Esas standart / yönetmelik / program", G.standart || ""], ["Tanıklık kapsamı", G.kapsam || ""],
     [], ["Modüller", A.modules.map(id => MOD[id].code + " " + MOD[id].ad).join("; ")], ["NANDO / akreditasyon no", [A.info.nando, A.info.akrNo].filter(Boolean).join(" / ")],
     ["Denetçi", G.denetci || ""], ["Teknik uzman", G.uzman || ""], [], ["Kodlar", CODES.map(c => c + " = " + CODE_TXT[c]).join(" · ")]];
   const ws0 = XLSX.utils.aoa_to_sheet(info); ws0["!cols"] = [{ wch: 38 }, { wch: 90 }]; XLSX.utils.book_append_sheet(wb, ws0, "1. Kapak");

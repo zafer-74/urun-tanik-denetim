@@ -6,7 +6,7 @@ const F62_ROL = ["Baş Tetkikçi", "Tetkikçi", "Teknik Uzman", "Stajyer Tetkik�
 function f62() {
   A.f62 = A.f62 || {};
   const r = A.f62;
-  r.g = r.g || {}; r.c = r.c || {}; r.ekip = r.ekip || [{}, {}, {}, {}];
+  r.g = r.g || {}; r.c = r.c || {}; r.ekip = r.ekip || [{}, {}, {}, {}]; r.dok = r.dok || [{}];
   const i = A.info;
   if (r.g.udk === undefined) r.g.udk = i.kurulus || "";
   if (r.g.tur === undefined) r.g.tur = i.tur || "";
@@ -19,6 +19,33 @@ function f62() {
   if (r.g.standart === undefined) r.g.standart = f62Standart();
   if (r.g.kapsam === undefined) r.g.kapsam = f62Kapsam();
   return r;
+}
+const DOK_ONERI = ["Belgelendirme Prosedürü", "Tetkik / Muayene Prosedürü", "Ek V Son Muayene Talimatı", "AB Tip İncelemesi Talimatı", "Kalite Sistemi Değerlendirme Talimatı",
+  "Muayene / Tetkik Kontrol Listesi", "Deney Kayıt Formu", "Tetkik Planı Formu", "Tetkik / Muayene Raporu Formu", "Uygunsuzluk Formu", "Belgelendirme Sözleşmesi", "Belge / Sertifika Formu"];
+function dokListe(r) {
+  return (r.dok || []).filter(d => d.kod || d.ad).map((d, i) => `${i + 1}) ${[d.kod, d.ad].filter(Boolean).join(" – ")}${d.rev ? " – Rev. " + d.rev : ""}${d.revt ? " (" + trDate(d.revt) + ")" : ""}`).join("\n");
+}
+function dokHtml(r) {
+  return `<div class="card dok"><h3>Tetkikte Kullanılan Dokümanlar <small class="muted">/ Documents Used During Audit</small></h3>
+    <div class="muted" style="margin-bottom:6px">Belgelendirme kuruluşunun prosedürleri, talimatları, formları, kontrol listeleri vb. Bu liste F701-062 Bölüm 2.1 "Tetkikte Kullanılan Dokümanlar" satırına aktarılır.</div>
+    <div class="dokhead"><span>Doküman kodu</span><span>Doküman adı</span><span>Revizyon no</span><span>Revizyon tarihi</span><span></span></div>
+    ${r.dok.map((d, n) => `<div class="dokrow">
+      <label class="dc c-kod"><i>Doküman kodu</i><input class="t" data-d="${n}" data-x="kod" placeholder="Doküman kodu" value="${esc(d.kod || "")}"></label>
+      <label class="dc c-ad"><i>Doküman adı</i><input class="t" data-d="${n}" data-x="ad" list="dokad" placeholder="Doküman adı" value="${esc(d.ad || "")}"></label>
+      <label class="dc c-rev"><i>Revizyon no</i><input class="t" data-d="${n}" data-x="rev" placeholder="Rev. no" value="${esc(d.rev || "")}"></label>
+      <label class="dc c-revt"><i>Revizyon tarihi</i><input class="t" type="date" data-d="${n}" data-x="revt" value="${esc(d.revt || "")}"></label>
+      <button class="delbtn" data-dd="${n}" title="Satırı sil">✕</button></div>`).join("")}
+    <datalist id="dokad">${DOK_ONERI.map(x => `<option value="${x}">`).join("")}</datalist>
+    <button class="btn dokadd" id="dokAdd">＋ Doküman ekle</button>
+    <div class="muted" style="text-align:right;margin-top:4px">${r.dok.filter(d => d.kod || d.ad).length} doküman kayıtlı</div></div>`;
+}
+function bindDok(root, rerender) {
+  const r = f62();
+  root.querySelectorAll("[data-d]").forEach(e => e.oninput = e.onchange = () => { r.dok[+e.dataset.d][e.dataset.x] = e.value; markDirty(); });
+  root.querySelectorAll("[data-dd]").forEach(b => b.onclick = () => { const n = +b.dataset.dd; const d = r.dok[n];
+    if ((d.kod || d.ad) && !confirm("Bu doküman satırı silinsin mi?")) return; r.dok.splice(n, 1); if (!r.dok.length) r.dok.push({}); markDirty(); rerender(); });
+  const add = root.querySelector("#dokAdd"); if (add) add.onclick = () => { r.dok.push({}); markDirty(); rerender();
+    setTimeout(() => { const ins = root.querySelectorAll('.dokrow input[data-x="kod"]'); ins[ins.length - 1]?.focus(); }, 30); };
 }
 function f62Standart() {
   const hs = new Set();
@@ -70,7 +97,8 @@ function renderF62() {
         const [tr, en] = it.t.split(" / ");
         h += `<div class="item" data-v="${{ 1: "U", 2: "K", 3: "UY", UD: "UD" }[c.a] || ""}"><div class="h"><span class="tx"><b>${esc(tr)}</b>${en ? ` <span class="muted">/ ${esc(it.t.slice(tr.length + 3))}</span>` : ""}</span></div>
           <div class="codes" style="margin-left:0">${F62_AP.map(([v, l]) => `<button class="code ${c.a === v ? "on" : ""}" data-c="${{ 1: "U", 2: "K", 3: "UY", UD: "UD" }[v]}" data-ap="${v}" data-id="${it.id}" title="${l}">${v}</button>`).join("")}</div>
-          <label class="f"><span>Açıklamalar / Explanations</span><textarea class="t" data-c="${it.id}" rows="${sec.id === "2.4" ? 8 : 2}">${esc(c.e || "")}</textarea></label></div>`;
+          ${it.id === "R5_10" ? `<div class="muted" style="white-space:pre-line;margin-top:6px"><b>Kapaktaki doküman listesi (rapora otomatik eklenir):</b>\n${esc(dokListe(r) || "— henüz doküman girilmedi —")}</div>` : ""}
+          <label class="f"><span>${it.id === "R5_10" ? "Ek açıklama" : "Açıklamalar / Explanations"}</span><textarea class="t" data-c="${it.id}" rows="${sec.id === "2.4" ? 8 : 2}">${esc(c.e || "")}</textarea></label></div>`;
       });
     });
   });
@@ -113,7 +141,9 @@ async function exportF62() {
   r.ekip.forEach((e, n) => { V[`T${n + 1}_AD`] = e.ad; V[`T${n + 1}_SOYAD`] = e.soyad; V[`T${n + 1}_GOREV`] = e.gorev; });
   window.F62.forEach(s => s.groups.forEach(gr => gr.items.forEach(it => {
     const c = r.c[it.id] || {};
-    V["E_" + it.id] = c.a === "UD" ? ("UD" + (c.e ? " – " + c.e : "")) : (c.e || "");
+    let e = c.e || "";
+    if (it.id === "R5_10") { const dl = dokListe(r); if (dl) e = dl + (e ? "\n" + e : ""); }
+    V["E_" + it.id] = c.a === "UD" ? ("UD" + (e ? " – " + e : "")) : e;
     [1, 2, 3].forEach(n => { const on = c.a === String(n); V[`K_${it.id}_${n}`] = on ? "1" : "0"; V[`C_${it.id}_${n}`] = on ? "☒" : "☐"; });
   })));
   try {
@@ -182,8 +212,9 @@ function renderKapak() {
     ${covers}
     <h2>Bölüm 1 — Genel Bilgiler <small class="muted">/ Section 1 — General Information</small></h2>
     ${f62B1Html(r)}
+    ${dokHtml(r)}
     <div class="row" style="margin-top:12px"><button class="btn" id="kpGo">Çeklisti başlat ›</button><button class="btn sec" id="kpInfo">✎ Modülleri değiştir</button></div>`;
-  bindF62B1(p, renderKapak);
+  bindF62B1(p, renderKapak); bindDok(p, renderKapak);
   $("#kpGo").onclick = () => { tab = A.modules[0] || "O"; renderAudit(); window.scrollTo(0, 0); };
   $("#kpInfo").onclick = () => editInfo(A);
 }
