@@ -1,6 +1,16 @@
 /* F701-062 Ürün Belgelendirme Kuruluşları için Tanık Denetim Raporu — uygulama içi form ve Word çıktısı */
 "use strict";
 const F62_AP = [["1", "Yeterli"], ["2", "Kısmen yeterli"], ["3", "Yeterli değil"], ["UD", "Uygulanabilir değil"]];
+const F62_TUR = ["Ön Denetim / Pre-Assessment", "İlk Akreditasyon Denetimi / Initial Accreditation Assessment", "1. Gözetim Denetimi / 1st Surveillance Assessment",
+  "2. Gözetim Denetimi / 2nd Surveillance Assessment", "Kapsam Genişletme Denetimi / Scope Extension Assessment", "Akreditasyon Yenileme Denetimi / Re-Accreditation Assessment",
+  "Gözetim Denetimi / Surveillance Assessment", "Tanık Denetim / Witness Assessment", "Uzaktan Denetim / Remote Assessment", "Plan Dışı Denetim / Unannounced Visit", "Diğer / Other"];
+function turNorm(v) {               // eski serbest metin değerlerini form listesine eşle
+  if (!v || F62_TUR.includes(v)) return v || "";
+  const t = v.toLocaleLowerCase("tr");
+  const m = [["tanık", 7], ["ön denetim", 0], ["ilk", 1], ["yenile", 5], ["kapsam", 4], ["uzaktan", 8], ["plan dışı", 9], ["gözetim", 6]].find(([k]) => t.includes(k));
+  return m ? F62_TUR[m[1]] : v;
+}
+function turText(g) { return g.tur === "Diğer / Other" && g.turDiger ? "Diğer / Other – " + g.turDiger : (g.tur || ""); }
 const F62_ROL = ["Baş Tetkikçi", "Tetkikçi", "Teknik Uzman", "Stajyer Tetkikçi", "Gözlemci", "Karar Verici"];
 
 function f62() {
@@ -10,6 +20,7 @@ function f62() {
   const i = A.info;
   if (r.g.udk === undefined) r.g.udk = i.kurulus || "";
   if (r.g.tur === undefined) r.g.tur = i.tur || "";
+  r.g.tur = turNorm(r.g.tur);
   if (r.g.bas === undefined) r.g.bas = i.tarih || "";
   if (r.g.bit === undefined) r.g.bit = i.tarih || "";
   if (r.g.denetci === undefined) r.g.denetci = i.basDenetci || "";
@@ -132,7 +143,7 @@ async function exportF62() {
   if (!window.JSZip) return toast("Word kütüphanesi yükleniyor, birkaç saniye sonra tekrar deneyin");
   const r = f62(), g = r.g;
   const V = {
-    DOSYA1: g.dosya1 || "……", DOSYA2: g.dosya2 || "", DENETIM_NO: g.no, BASLANGIC: trDate(g.bas), BITIS: trDate(g.bit), UDK: g.udk, DENETIM_TURU: g.tur,
+    DOSYA1: g.dosya1 || "……", DOSYA2: g.dosya2 || "", DENETIM_NO: g.no, BASLANGIC: trDate(g.bas), BITIS: trDate(g.bit), UDK: g.udk, DENETIM_TURU: turText(g),
     MUSTERI: g.musteri, DISKAYNAK: g.diskaynak, STANDART: g.standart, KAPSAM: g.kapsam,
     SONUC: g.sonuc, UYGUNSUZLUK: g.uyg, ONERI: g.oneri, DENETCI: g.denetci, DTARIH: trDate(g.dtarih), UZMAN: g.uzman, UTARIH: trDate(g.utarih),
     K_KG: g.kg ? "1" : "0", C_KG: g.kg ? "☒" : "☐",
@@ -171,7 +182,9 @@ function f62B1Html(r) {
     <label class="f"><span>Dosya No son eki (- sonrası)</span><input class="t" data-g="dosya2" value="${esc(g.dosya2 || "")}" placeholder="ör. Ü"></label>
     ${inp("no", "Denetim No / Assessment No")}${inp("udk", "UDK Adı / Name of the CAB")}
     ${inp("bas", "Denetim tarihi — başlangıç", "date")}${inp("bit", "Denetim tarihi — bitiş", "date")}
-    ${inp("tur", "Denetim Türü / Assessment Type")}
+    <label class="f"><span>Denetim Türü / Assessment Type</span><select class="t" data-g="tur"><option value="">— seçiniz —</option>
+      ${(F62_TUR.includes(g.tur) || !g.tur ? F62_TUR : [g.tur, ...F62_TUR]).map(o => `<option ${g.tur === o ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>
+      ${g.tur === "Diğer / Other" ? `<input class="t" data-g="turDiger" placeholder="Denetim türünü yazın" value="${esc(g.turDiger || "")}" style="margin-top:6px">` : ""}</label>
     <label class="f"><span>Kapsam Genişletme / Scope Extension</span><label style="display:flex;gap:8px;align-items:center;padding:8px 0"><input type="checkbox" data-g="kg" ${g.kg ? "checked" : ""} style="width:20px;height:20px"> Evet</label></label>
   </div>
   <div class="f"><span class="muted">BK Tetkik Ekibi Üyeleri ve Tetkikteki Rolü (en fazla 4)</span>
@@ -190,6 +203,7 @@ function bindF62B1(root, rerender) {
   const SYNC = { udk: "kurulus", tur: "tur", bas: "tarih", denetci: "basDenetci", uzman: "uzman" };
   root.querySelectorAll("[data-g]").forEach(e => e.oninput = e.onchange = () => {
     const k = e.dataset.g; g[k] = e.type === "checkbox" ? e.checked : e.value;
+    if (k === "tur") { A.info.tur = g.tur; markDirty(); return rerender(); }
     if (SYNC[k]) { A.info[SYNC[k]] = g[k]; if (k === "udk") setBar(g.udk || "Denetim", (A.info.tarih || "") + " · " + A.modules.map(id => MOD[id].code).join(", "), true); }
     markDirty();
   });

@@ -110,7 +110,7 @@ async function home() {
     const t = totalStats(a);
     const d = document.createElement("div"); d.className = "card audit";
     d.innerHTML = `<div class="row"><div class="grow"><b>${esc(a.info.kurulus || "(kuruluş adı yok)")}</b>
-      <div class="muted">${esc(a.info.tarih || "")} · ${esc(a.info.tur || "")} · ${a.modules.map(id => MOD[id].code).join(", ")}</div></div>
+      <div class="muted">${esc(a.info.tarih || "")} · ${esc((a.info.tur || "").split(" / ")[0])} · ${a.modules.map(id => MOD[id].code).join(", ")}</div></div>
       <div class="muted" style="text-align:right">${t.done}/${t.n}<br>${t.UY ? `<span class="badge b-UY">${t.UY} UY</span> ` : ""}${t.K ? `<span class="badge b-K">${t.K} K</span>` : ""}</div>
       <button class="delbtn" title="Denetimi sil" aria-label="Denetimi sil">🗑</button></div>
       <div class="bar"><i style="width:${t.pct}%"></i></div>`;
@@ -128,13 +128,14 @@ async function home() {
 /* ---------- Denetim bilgileri ---------- */
 const INFO = [
   ["kurulus", "Denetlenen kuruluş"], ["nando", "Onaylanmış kuruluş kimlik no (NANDO)"], ["akrNo", "Akreditasyon / başvuru no"],
-  ["tur", "Denetim türü", ["İlk akreditasyon", "Yeniden akreditasyon", "Gözetim", "Kapsam genişletme", "Tanık denetimi", "Diğer"]],
+  ["tur", "Denetim türü", "TUR"],
   ["tarih", "Denetim tarihi", "date"], ["yer", "Denetim yeri(leri)"], ["basDenetci", "Baş denetçi"], ["uzman", "Teknik uzman(lar)"],
   ["dosyaNo", "İncelenen dosya / belge no(ları)"], ["not", "Genel not", "area"],
 ];
 function infoFields(info) {
   return `<div class="grid2">${INFO.map(([k, l, t]) => {
     const v = esc(info[k] || "");
+    if (t === "TUR") { const v = turNorm(info[k]); return `<label class="f"><span>${l}</span><select class="t" data-k="${k}"><option value=""></option>${F62_TUR.map(o => `<option ${v === o ? "selected" : ""}>${esc(o)}</option>`).join("")}</select></label>`; }
     if (Array.isArray(t)) return `<label class="f"><span>${l}</span><select class="t" data-k="${k}"><option value=""></option>${t.map(o => `<option ${info[k] === o ? "selected" : ""}>${o}</option>`).join("")}</select></label>`;
     if (t === "area") return `<label class="f" style="grid-column:1/-1"><span>${l}</span><textarea class="t" data-k="${k}">${v}</textarea></label>`;
     return `<label class="f"><span>${l}</span><input class="t" data-k="${k}" type="${t === "date" ? "date" : "text"}" value="${v}"></label>`;
@@ -151,7 +152,7 @@ function launchTree() {
     </details></div>`;
 }
 async function startAudit(mods) {
-  A = { id: uid(), created: new Date().toISOString(), info: { tarih: new Date().toISOString().slice(0, 10), tur: "Tanık denetimi" }, modules: D.modules.map(m => m.id).filter(id => mods.includes(id)), answers: {}, tanik: {} };
+  A = { id: uid(), created: new Date().toISOString(), info: { tarih: new Date().toISOString().slice(0, 10), tur: "Tanık Denetim / Witness Assessment" }, modules: D.modules.map(m => m.id).filter(id => mods.includes(id)), answers: {}, tanik: {} };
   await saveNow(); tab = "kapak"; openAudit(A.id); toast("Yeni denetim açıldı — kapak sayfasını doldurun", 3000);
 }
 function modTree(sel, readonly) {
@@ -372,7 +373,7 @@ function exportXlsx() {
   const R = f62(), G = R.g;
   const info = [["F701-062 — Ürün Belgelendirme Kuruluşları için Tanık Denetim Raporu — Kapak / Bölüm 1 Genel Bilgiler"], ["Uygulama sürümü", D.surum], [],
     ["Dosya No", "AB-" + (G.dosya1 || "") + (G.dosya2 ? "-" + G.dosya2 : "")], ["Denetim No", G.no || ""], ["Denetim tarihi", (G.bas || "") + " – " + (G.bit || "")],
-    ["UDK adı", G.udk || ""], ["Denetim türü", G.tur || ""], ["Kapsam genişletme", G.kg ? "Evet" : "Hayır"],
+    ["UDK adı", G.udk || ""], ["Denetim türü", turText(G)], ["Kapsam genişletme", G.kg ? "Evet" : "Hayır"],
     ...R.ekip.filter(e => e.ad || e.soyad).map((e, n) => ["BK tetkik ekibi " + (n + 1), [e.ad, e.soyad].filter(Boolean).join(" ") + (e.gorev ? " — " + e.gorev : "")]),
     ["BK müşterisi ve adresi", G.musteri || ""], ["Tetkikte kullanılan dokümanlar", dokListe(R)], ["Dış kaynak", G.diskaynak || ""], ["Esas standart / yönetmelik / program", G.standart || ""], ["Tanıklık kapsamı", G.kapsam || ""],
     [], ["Modüller", A.modules.map(id => MOD[id].code + " " + MOD[id].ad).join("; ")], ["NANDO / akreditasyon no", [A.info.nando, A.info.akrNo].filter(Boolean).join(" / ")],
