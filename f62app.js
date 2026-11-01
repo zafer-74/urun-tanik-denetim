@@ -36,8 +36,7 @@ function dokHtml(r) {
       <label class="dc c-revt"><i>Revizyon tarihi</i><input class="t" type="date" data-d="${n}" data-x="revt" value="${esc(d.revt || "")}"></label>
       <button class="delbtn" data-dd="${n}" title="Satırı sil">✕</button></div>`).join("")}
     <datalist id="dokad">${DOK_ONERI.map(x => `<option value="${x}">`).join("")}</datalist>
-    <button class="btn dokadd" id="dokAdd">＋ Doküman ekle</button>
-    <div class="muted" style="text-align:right;margin-top:4px">${r.dok.filter(d => d.kod || d.ad).length} doküman kayıtlı</div></div>`;
+    <div class="row" style="margin-top:6px"><button class="btn sec sm" id="dokAdd">＋ Doküman ekle</button><span class="muted">${r.dok.filter(d => d.kod || d.ad).length} doküman</span></div></div>`;
 }
 function bindDok(root, rerender) {
   const r = f62();

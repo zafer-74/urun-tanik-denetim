@@ -162,4 +162,3 @@ table.sum tr.tot td{background:var(--light);font-weight:700}
   .dokrow .c-rev{grid-column:1;grid-row:3}.dokrow .c-revt{grid-column:2/4;grid-row:3}
   .dokrow .delbtn{grid-column:3;grid-row:1;align-self:end}
 }
-.dokadd{display:block;width:100%;margin-top:10px;padding:12px;font-size:15px;border:2px dashed #fff;outline:1px solid var(--navy)}
