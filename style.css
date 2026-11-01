@@ -135,3 +135,14 @@ table.sum tr.tot td{background:var(--light);font-weight:700}
 .launch .go{display:flex;width:100%;align-items:center;gap:10px;text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer}
 .launch .go:hover,.launch .go:active{background:var(--light);border-color:var(--blue)}
 .launch .plus{flex:0 0 auto;width:30px;height:30px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px}
+
+.formhead{display:flex;align-items:stretch;background:#C8102E;color:#fff;border-radius:10px 10px 0 0;margin-top:6px;overflow:hidden}
+.formhead .fh-l{flex:1;padding:14px 16px;font-size:18px;letter-spacing:.5px;display:flex;align-items:center}
+.formhead .fh-r{border-left:2px solid #fff;padding:6px 14px;font-size:26px;text-align:center;line-height:1}
+.formhead .fh-r small{font-size:11px}
+.fh-title{background:#fff;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;padding:10px 16px;margin-bottom:10px;text-align:center}
+.fh-title b{display:block;font-size:16px}.fh-title i{color:var(--mut);font-size:13px}
+.cover{background:#fff;border:1px solid var(--line);border-left:6px solid var(--navy);border-radius:10px;padding:12px 14px;margin:10px 0}
+.cover .cv-top{display:flex;gap:12px;align-items:center;margin-bottom:6px}
+.cover .cv-code{flex:0 0 auto;background:var(--navy);color:#fff;font-weight:800;border-radius:10px;padding:10px 12px;font-size:18px}
+.cover .cv-top b{color:var(--navy)}

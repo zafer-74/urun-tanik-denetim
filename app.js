@@ -152,7 +152,7 @@ function launchTree() {
 }
 async function startAudit(mods) {
   A = { id: uid(), created: new Date().toISOString(), info: { tarih: new Date().toISOString().slice(0, 10), tur: "Tanık denetimi" }, modules: D.modules.map(m => m.id).filter(id => mods.includes(id)), answers: {}, tanik: {} };
-  await saveNow(); tab = A.modules[0]; openAudit(A.id); toast("Yeni denetim açıldı — kuruluş bilgilerini girmeyi unutmayın", 3500);
+  await saveNow(); tab = "kapak"; openAudit(A.id); toast("Yeni denetim açıldı — kapak sayfasını doldurun", 3000);
 }
 function modTree(sel, readonly) {
   const mods = g => D.modules.filter(m => m.grup === g.id);
@@ -192,6 +192,8 @@ function editInfo(a) {
     if (!mods.length) return toast("En az bir modül seçin");
     if (isNew) { A = { id: uid(), created: new Date().toISOString(), info: inf, modules: mods, answers: {}, tanik: {} }; }
     else { A.info = inf; A.modules = D.modules.map(m => m.id).filter(id => mods.includes(id)); }
+    if (isNew) tab = "kapak";
+    else if (A.f62 && A.f62.g) { const g = A.f62.g; g.udk = inf.kurulus; g.tur = inf.tur; g.bas = inf.tarih; g.denetci = inf.basDenetci; g.uzman = inf.uzman; }
     await saveNow(); openAudit(A.id);
   };
 }
@@ -200,13 +202,13 @@ function editInfo(a) {
 async function openAudit(id) {
   A = await DB.get("audits", id); if (!A) return home();
   A.tanik = A.tanik || {};
-  if (tab === "info") tab = A.modules[0] || "O";
+  if (tab === "info") tab = "kapak";
   renderAudit();
 }
 function renderAudit() {
   setBar(A.info.kurulus || "Denetim", (A.info.tarih || "") + " · " + A.modules.map(id => MOD[id].code).join(", "), true);
   const sh = sheetsOf(A);
-  const tabs = [...sh.map(s => { const st = stats(A, s); return { id: s.id, t: (s.mod ? s.mod.code + " " : "") + s.ad, sub: st.done + "/" + st.n }; }),
+  const tabs = [{ id: "kapak", t: "Kapak" }, ...sh.map(s => { const st = stats(A, s); return { id: s.id, t: (s.mod ? s.mod.code + " " : "") + s.ad, sub: st.done + "/" + st.n }; }),
     { id: "tanik", t: "Tanık planı" }, { id: "ozet", t: "Özet ve bulgular" }, { id: "f62", t: "F701-062 Rapor" }];
   const v = $("#view");
   let lastG = null;
@@ -219,6 +221,7 @@ function renderAudit() {
   if (tab === "ozet") return renderSummary();
   if (tab === "tanik") return renderTanik();
   if (tab === "f62") return renderF62();
+  if (tab === "kapak") return renderKapak();
   renderSheet(sh.find(s => s.id === tab) || sh[0]);
 }
 
@@ -227,7 +230,7 @@ function renderSheet(sheet) {
   const m = sheet.mod;
   const st = stats(A, sheet);
   let html = "";
-  if (!A.info.kurulus) html += `<div class="card row" style="border-color:var(--K);background:#fffbea"><div class="grow"><b>Denetim bilgileri eksik</b><div class="muted">Kuruluş adı, NANDO no, denetçi gibi bilgileri girin.</div></div><button class="btn sm" id="goInfo">✎ Bilgileri gir</button></div>`;
+  if (!A.info.kurulus) html += `<div class="card row" style="border-color:var(--K);background:#fffbea"><div class="grow"><b>Kapak sayfası eksik</b><div class="muted">UDK adı, denetim no, tarih ve tetkik ekibi bilgilerini girin.</div></div><button class="btn sm" id="goInfo">Kapağa git</button></div>`;
   if (m) html += `<details class="card kunye" ${st.done ? "" : "open"}><summary><b>${esc(m.baslik)}</b></summary>${m.ozet.map(([l, x]) => `<div><b>${esc(l)}</b><span>${esc(x)}</span></div>`).join("")}</details>`;
   else html += `<div class="card muted">Kuruluş düzeyinde bir kez değerlendirilir; modül sayfaları bu maddeleri tekrar etmez.</div>`;
   html += `<div class="tools">
@@ -235,7 +238,7 @@ function renderSheet(sheet) {
     <input class="search" placeholder="Ara (madde, dayanak…)" value="${esc(q)}">
     <span class="muted">${st.done}/${st.n} · %${st.pct}</span></div><div id="items"></div>`;
   p.innerHTML = html;
-  if ($("#goInfo")) $("#goInfo").onclick = () => editInfo(A);
+  if ($("#goInfo")) $("#goInfo").onclick = () => { tab = "kapak"; renderAudit(); window.scrollTo(0, 0); };
   p.querySelectorAll(".chip").forEach(c => c.onclick = () => { filt = c.dataset.f; renderSheet(sheet); });
   const si = p.querySelector(".search"); si.oninput = () => { q = si.value; drawItems(sheet); };
   drawItems(sheet);
@@ -366,9 +369,15 @@ function download(blob, name) { const a = document.createElement("a"); a.href = 
 function exportXlsx() {
   if (!window.XLSX) return toast("Excel kütüphanesi yükleniyor, birkaç saniye sonra tekrar deneyin");
   const wb = XLSX.utils.book_new();
-  const info = [["2014/33/AB MODÜL BAZLI AKREDİTASYON DENETİM ÇEKLİSTİ"], ["Uygulama sürümü", D.surum], [], ...INFO.map(([k, l]) => [l, A.info[k] || ""]),
-    ["Modüller", A.modules.map(id => MOD[id].code + " " + MOD[id].ad).join("; ")], [], ["Kodlar", CODES.map(c => c + " = " + CODE_TXT[c]).join(" · ")]];
-  const ws0 = XLSX.utils.aoa_to_sheet(info); ws0["!cols"] = [{ wch: 38 }, { wch: 90 }]; XLSX.utils.book_append_sheet(wb, ws0, "1. Bilgiler");
+  const R = f62(), G = R.g;
+  const info = [["F701-062 — Ürün Belgelendirme Kuruluşları için Tanık Denetim Raporu — Kapak / Bölüm 1 Genel Bilgiler"], ["Uygulama sürümü", D.surum], [],
+    ["Dosya No", "AB-" + (G.dosya1 || "") + (G.dosya2 ? "-" + G.dosya2 : "")], ["Denetim No", G.no || ""], ["Denetim tarihi", (G.bas || "") + " – " + (G.bit || "")],
+    ["UDK adı", G.udk || ""], ["Denetim türü", G.tur || ""], ["Kapsam genişletme", G.kg ? "Evet" : "Hayır"],
+    ...R.ekip.filter(e => e.ad || e.soyad).map((e, n) => ["BK tetkik ekibi " + (n + 1), [e.ad, e.soyad].filter(Boolean).join(" ") + (e.gorev ? " — " + e.gorev : "")]),
+    ["BK müşterisi ve adresi", G.musteri || ""], ["Dış kaynak", G.diskaynak || ""], ["Esas standart / yönetmelik / program", G.standart || ""], ["Tanıklık kapsamı", G.kapsam || ""],
+    [], ["Modüller", A.modules.map(id => MOD[id].code + " " + MOD[id].ad).join("; ")], ["NANDO / akreditasyon no", [A.info.nando, A.info.akrNo].filter(Boolean).join(" / ")],
+    ["Denetçi", G.denetci || ""], ["Teknik uzman", G.uzman || ""], [], ["Kodlar", CODES.map(c => c + " = " + CODE_TXT[c]).join(" · ")]];
+  const ws0 = XLSX.utils.aoa_to_sheet(info); ws0["!cols"] = [{ wch: 38 }, { wch: 90 }]; XLSX.utils.book_append_sheet(wb, ws0, "1. Kapak");
   const used = new Set();
   sheetsOf(A).forEach((s, i) => {
     const rows = [["No", "Bölüm", "Kontrol maddesi", "Dayanak", "Kanıt türü / teknik", "Değerlendirme", "Kanıt / dosya referansı", "Bulgu / Not", "Fotoğraf"]];

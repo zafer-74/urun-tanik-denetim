@@ -59,24 +59,7 @@ function renderF62() {
     ? `<textarea class="t" data-g="${k}">${esc(g[k] || "")}</textarea>` : `<input class="t" type="${type}" data-g="${k}" value="${esc(g[k] || "")}">`}</label>`;
   let h = `<div class="card muted">TÜRKAK <b>F701-062 Rev.03</b> — Ürün Belgelendirme Kuruluşları için Tanık Denetim Raporu. Alanları doldurun, ardından resmî şablon üzerine işlenmiş Word dosyasını indirin. Bölüm 2.4 ve Bölüm 3 çeklist sonuçlarından otomatik önerilebilir.</div>
   <div class="row"><button class="btn" id="f62dl">⬇ F701-062 Word (.docx)</button></div>
-  <h2>Bölüm 1 — Genel Bilgiler</h2><div class="card"><div class="grid2">
-    <label class="f"><span>Dosya No: AB-</span><input class="t" data-g="dosya1" value="${esc(g.dosya1 || "")}" placeholder="ör. 0123"></label>
-    <label class="f"><span>Dosya No son eki (- sonrası)</span><input class="t" data-g="dosya2" value="${esc(g.dosya2 || "")}" placeholder="ör. Ü"></label>
-    ${inp("no", "Denetim No / Assessment No")}${inp("udk", "UDK Adı / Name of the CAB")}
-    ${inp("bas", "Denetim tarihi — başlangıç", "date")}${inp("bit", "Denetim tarihi — bitiş", "date")}
-    ${inp("tur", "Denetim Türü / Assessment Type")}
-    <label class="f"><span>Kapsam Genişletme / Scope Extension</span><label style="display:flex;gap:8px;align-items:center;padding:8px 0"><input type="checkbox" data-g="kg" ${g.kg ? "checked" : ""} style="width:20px;height:20px"> Evet</label></label>
-  </div>
-  <div class="f"><span class="muted">BK Tetkik Ekibi Üyeleri ve Tetkikteki Rolü (en fazla 4)</span>
-  ${r.ekip.map((e, n) => `<div class="grid2" style="grid-template-columns:1fr 1fr 1fr;gap:6px;margin:4px 0">
-    <input class="t" data-e="${n}" data-x="ad" placeholder="Adı" value="${esc(e.ad || "")}"><input class="t" data-e="${n}" data-x="soyad" placeholder="Soyadı" value="${esc(e.soyad || "")}">
-    <input class="t" data-e="${n}" data-x="gorev" list="rol" placeholder="Görevi" value="${esc(e.gorev || "")}"></div>`).join("")}
-  <datalist id="rol">${F62_ROL.map(x => `<option value="${x}">`).join("")}</datalist></div>
-  <div class="grid2">${inp("musteri", "Belgelendirme Kuruluşu Müşterisi (Monte eden / İmalatçı) ve Adresi", "area", true)}
-  ${inp("diskaynak", "Dış kaynak kullanımı (laboratuvar, muayene kuruluşu vb.) — adı ve adresi", "area", true)}
-  ${inp("standart", "Tanık olunacak tetkike esas standart, yönetmelik, belgelendirme programı", "area", true)}
-  ${inp("kapsam", "Tanıklık yapılacak ürünlerin / hizmetlerin kapsamı", "area", true)}</div>
-  <div class="row"><button class="btn sec sm" id="f62std">↺ Standart ve kapsamı modüllerden yeniden doldur</button></div></div>`;
+  <h2>Bölüm 1 — Genel Bilgiler</h2>${f62B1Html(r)}`;
   window.F62.forEach(sec => {
     h += `<h2>Bölüm ${sec.id} — ${esc(sec.title)}</h2>`;
     if (sec.id === "2.4") h += `<div class="row"><button class="btn sec sm" id="f62s24">↺ Çeklist sonuçlarından öner</button><span class="muted">Onaylanmış kuruluş kapsamındaki değerlendirmeler (modül çeklistleri) bu bölüme aktarılır.</span></div>`;
@@ -100,15 +83,13 @@ function renderF62() {
     <div class="muted">Not: Uygunsuzluk tespit edilmesi durumunda uygunsuzluğa konu objektif deliller rapora ek olarak sunulmalıdır (fotoğraflar JSON yedeğinde ve çeklist notlarında).</div></div>
     <div class="row" style="margin-top:12px"><button class="btn" id="f62dl2">⬇ F701-062 Word (.docx)</button></div>`;
   p.innerHTML = h;
-  p.querySelectorAll("[data-g]").forEach(e => e.oninput = e.onchange = () => { g[e.dataset.g] = e.type === "checkbox" ? e.checked : e.value; markDirty(); });
-  p.querySelectorAll("[data-e]").forEach(e => e.oninput = () => { r.ekip[+e.dataset.e][e.dataset.x] = e.value; markDirty(); });
+  bindF62B1(p, renderF62);
   p.querySelectorAll("textarea[data-c]").forEach(e => e.oninput = () => { (r.c[e.dataset.c] = r.c[e.dataset.c] || {}).e = e.value; markDirty(); });
   p.querySelectorAll(".code[data-ap]").forEach(b => b.onclick = () => {
     const c = (r.c[b.dataset.id] = r.c[b.dataset.id] || {}); c.a = c.a === b.dataset.ap ? "" : b.dataset.ap;
     const it = b.closest(".item"); it.dataset.v = { 1: "U", 2: "K", 3: "UY", UD: "UD" }[c.a] || "";
     it.querySelectorAll(".code").forEach(x => x.classList.toggle("on", x.dataset.ap === c.a)); markDirty();
   });
-  $("#f62std").onclick = () => { g.standart = f62Standart(); g.kapsam = f62Kapsam(); markDirty(); renderF62(); };
   $("#f62s24").onclick = () => { const o = f62Ozet24(); const id = window.F62.find(s => s.id === "2.4").groups[0].items[0].id;
     if (r.c[id]?.e && !confirm("Mevcut açıklamanın üzerine yazılsın mı?")) return; r.c[id] = { e: o.text, a: o.ap }; markDirty(); renderF62(); toast("Bölüm 2.4 çeklistten dolduruldu"); };
   $("#f62son").onclick = () => { if ((g.sonuc || g.uyg) && !confirm("Mevcut metinlerin üzerine yazılsın mı?")) return; g.sonuc = f62Sonuc(); g.uyg = f62Uygunsuzluk(); markDirty(); renderF62(); };
@@ -149,4 +130,60 @@ async function exportF62() {
     download(blob, `F701-062_Tanik_Denetim_Raporu_${n}_${g.bas || ""}.docx`);
     toast("F701-062 raporu indirildi");
   } catch (e) { console.error(e); toast("Rapor oluşturulamadı: " + e.message); }
+}
+
+/* ---------- Bölüm 1 — Genel Bilgiler (Kapak ve rapor sekmesi ortak) ---------- */
+function f62B1Html(r) {
+  const g = r.g;
+  const inp = (k, l, type = "text", full = false) => `<label class="f" ${full ? 'style="grid-column:1/-1"' : ""}><span>${l}</span>${type === "area"
+    ? `<textarea class="t" data-g="${k}">${esc(g[k] || "")}</textarea>` : `<input class="t" type="${type}" data-g="${k}" value="${esc(g[k] || "")}">`}</label>`;
+  return `<div class="card b1"><div class="grid2">
+    <label class="f"><span>Dosya No: AB-</span><input class="t" data-g="dosya1" value="${esc(g.dosya1 || "")}" placeholder="ör. 0123"></label>
+    <label class="f"><span>Dosya No son eki (- sonrası)</span><input class="t" data-g="dosya2" value="${esc(g.dosya2 || "")}" placeholder="ör. Ü"></label>
+    ${inp("no", "Denetim No / Assessment No")}${inp("udk", "UDK Adı / Name of the CAB")}
+    ${inp("bas", "Denetim tarihi — başlangıç", "date")}${inp("bit", "Denetim tarihi — bitiş", "date")}
+    ${inp("tur", "Denetim Türü / Assessment Type")}
+    <label class="f"><span>Kapsam Genişletme / Scope Extension</span><label style="display:flex;gap:8px;align-items:center;padding:8px 0"><input type="checkbox" data-g="kg" ${g.kg ? "checked" : ""} style="width:20px;height:20px"> Evet</label></label>
+  </div>
+  <div class="f"><span class="muted">BK Tetkik Ekibi Üyeleri ve Tetkikteki Rolü (en fazla 4)</span>
+  ${r.ekip.map((e, n) => `<div class="grid2" style="grid-template-columns:1fr 1fr 1fr;gap:6px;margin:4px 0">
+    <input class="t" data-e="${n}" data-x="ad" placeholder="Adı" value="${esc(e.ad || "")}"><input class="t" data-e="${n}" data-x="soyad" placeholder="Soyadı" value="${esc(e.soyad || "")}">
+    <input class="t" data-e="${n}" data-x="gorev" list="rol" placeholder="Görevi" value="${esc(e.gorev || "")}"></div>`).join("")}
+  <datalist id="rol">${F62_ROL.map(x => `<option value="${x}">`).join("")}</datalist></div>
+  <div class="grid2">${inp("musteri", "Belgelendirme Kuruluşu Müşterisi (Monte eden / İmalatçı) ve Adresi", "area", true)}
+  ${inp("diskaynak", "Dış kaynak kullanımı (laboratuvar, muayene kuruluşu vb.) — adı ve adresi", "area", true)}
+  ${inp("standart", "Tanık olunacak tetkike esas standart, yönetmelik, belgelendirme programı", "area", true)}
+  ${inp("kapsam", "Tanıklık yapılacak ürünlerin / hizmetlerin kapsamı", "area", true)}</div>
+  <div class="row"><button class="btn sec sm" id="f62std">↺ Standart ve kapsamı modüllerden yeniden doldur</button></div></div>`;
+}
+function bindF62B1(root, rerender) {
+  const r = f62(), g = r.g;
+  const SYNC = { udk: "kurulus", tur: "tur", bas: "tarih", denetci: "basDenetci", uzman: "uzman" };
+  root.querySelectorAll("[data-g]").forEach(e => e.oninput = e.onchange = () => {
+    const k = e.dataset.g; g[k] = e.type === "checkbox" ? e.checked : e.value;
+    if (SYNC[k]) { A.info[SYNC[k]] = g[k]; if (k === "udk") setBar(g.udk || "Denetim", (A.info.tarih || "") + " · " + A.modules.map(id => MOD[id].code).join(", "), true); }
+    markDirty();
+  });
+  root.querySelectorAll("[data-e]").forEach(e => e.oninput = () => { r.ekip[+e.dataset.e][e.dataset.x] = e.value; markDirty(); });
+  const b = root.querySelector("#f62std"); if (b) b.onclick = () => { g.standart = f62Standart(); g.kapsam = f62Kapsam(); markDirty(); rerender(); };
+}
+
+/* ---------- Kapak sayfası ---------- */
+function renderKapak() {
+  const r = f62(), p = $("#pane");
+  const covers = A.modules.map(id => { const m = MOD[id], o = Object.fromEntries(m.ozet);
+    const grp = m.grup === "aksam" ? "Güvenlik Aksamları" : "Asansör";
+    return `<div class="cover"><div class="cv-top"><span class="cv-code">${m.code}</span><div><div class="muted">2014/33/AB Asansör Yönetmeliği › ${grp}</div><b>${esc(m.baslik)}</b></div></div>
+      <div class="kunye">${["Direktif dayanağı", "Başvuran / OK çıktısı"].map(l => o[l] ? `<div><b>${l}</b><span>${esc(o[l])}</span></div>` : "").join("")}
+      <div><b>Akreditasyon</b><span>${esc(o["Akreditasyon (EA-2/17 M:2026)"] || o["Akreditasyon (EA-2/17 S1)"] || "")}</span></div>
+      <div><b>Çeklist</b><span>${m.items.length} modül maddesi + ${D.ortak.length} ortak şart</span></div></div></div>`; }).join("");
+  p.innerHTML = `<div class="formhead"><div class="fh-l">TÜRK AKREDİTASYON KURUMU</div><div class="fh-r">F<br><small>701-062</small></div></div>
+    <div class="fh-title"><b>Ürün Belgelendirme Kuruluşları için Tanık Denetim Raporu</b><i>Witness Assessment Report Used For Product Certification</i></div>
+    ${covers}
+    <h2>Bölüm 1 — Genel Bilgiler <small class="muted">/ Section 1 — General Information</small></h2>
+    ${f62B1Html(r)}
+    <div class="row" style="margin-top:12px"><button class="btn" id="kpGo">Çeklisti başlat ›</button><button class="btn sec" id="kpInfo">✎ Modülleri değiştir</button></div>`;
+  bindF62B1(p, renderKapak);
+  $("#kpGo").onclick = () => { tab = A.modules[0] || "O"; renderAudit(); window.scrollTo(0, 0); };
+  $("#kpInfo").onclick = () => editInfo(A);
 }
