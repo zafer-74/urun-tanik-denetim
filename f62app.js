@@ -19,7 +19,7 @@ function f62() {
   A.f62 = A.f62 || {};
   const r = A.f62;
   r.g = r.g || {}; r.c = r.c || {}; if (!r.ekipV2) { r.ekip = (r.ekip || []).filter(e => e && (e.ad || e.soyad || e.gorev || e.meslek)); r.ekipV2 = 1; }
-  if (!r.ekip.length) r.ekip.push({}); r.dok = r.dok || [{}];
+  if (!r.ekip.length) r.ekip.push({}); r.dok = r.dok || [{}]; r.ekp = r.ekp || [{}];
   const i = A.info;
   if (r.g.udk === undefined) r.g.udk = i.kurulus || "";
   if (r.g.tur === undefined) r.g.tur = i.tur || "";
@@ -59,6 +59,34 @@ function bindDok(root, rerender) {
     if ((d.kod || d.ad) && !confirm("Bu doküman satırı silinsin mi?")) return; r.dok.splice(n, 1); if (!r.dok.length) r.dok.push({}); markDirty(); rerender(); });
   const add = root.querySelector("#dokAdd"); if (add) add.onclick = () => { r.dok.push({}); markDirty(); rerender();
     setTimeout(() => { const ins = root.querySelectorAll('.dokrow input[data-x="kod"]'); ins[ins.length - 1]?.focus(); }, 30); };
+}
+const EKP_ONERI = ["Deney ağırlıkları", "Takometre / hız ölçer", "Dinamometre / kuvvet ölçer", "Yalıtım direnci ölçer (megger)", "Topraklama / döngü empedans ölçer",
+  "Multimetre", "Pens ampermetre", "Şerit metre / lazer mesafe ölçer", "Kronometre", "Manometre (hidrolik)", "Lüksmetre", "Ses seviyesi ölçer", "Kumpas", "Su terazisi / eğim ölçer"];
+function ekpListe(r) {
+  return (r.ekp || []).filter(d => d.ad || d.kod).map((d, i) => `${i + 1}) ${[d.ad, d.kod ? "Kod: " + d.kod : ""].filter(Boolean).join(" – ")}` +
+    `${d.kalt ? " – Kal. tarihi: " + trDate(d.kalt) : ""}${d.lab ? " – Lab. Akr. No: " + d.lab : ""}${d.sert ? " – Sertifika No: " + d.sert : ""}`).join("\n");
+}
+function ekpHtml(r) {
+  return `<div class="card dok ekp"><h3>Kullanılan Ekipmanlar ve Kalibrasyon Durumu <small class="muted">/ Equipment Used and Its Calibration Status</small></h3>
+    <div class="muted" style="margin-bottom:6px">F701-062 Bölüm 2.2 — Dış Kaynak Kullanımı ve Ölçme Ekipmanları. Tanık olunan tetkikte kullanılan cihaz ve ekipmanlar; liste rapordaki "Kullanılan Ekipmanlar ve Kalibrasyon Durumu" satırına aktarılır.</div>
+    <div class="ekphead"><span>Cihaz / ekipman adı</span><span>Kodu</span><span>Kalibrasyon tarihi</span><span>Lab. Akreditasyon No</span><span>Sertifika No</span><span></span></div>
+    ${r.ekp.map((d, n) => `<div class="ekprow">
+      <label class="dc c1"><i>Cihaz / ekipman adı</i><input class="t" data-k2="${n}" data-x="ad" list="ekpad" placeholder="Cihaz / ekipman adı" value="${esc(d.ad || "")}"></label>
+      <label class="dc c2"><i>Kodu</i><input class="t" data-k2="${n}" data-x="kod" placeholder="Kodu" value="${esc(d.kod || "")}"></label>
+      <label class="dc c3"><i>Kalibrasyon tarihi</i><input class="t" type="date" data-k2="${n}" data-x="kalt" value="${esc(d.kalt || "")}"></label>
+      <label class="dc c4"><i>Lab. Akreditasyon No</i><input class="t" data-k2="${n}" data-x="lab" placeholder="ör. AB-0000-K" value="${esc(d.lab || "")}"></label>
+      <label class="dc c5"><i>Sertifika No</i><input class="t" data-k2="${n}" data-x="sert" placeholder="Sertifika No" value="${esc(d.sert || "")}"></label>
+      <button class="delbtn" data-kd="${n}" title="Satırı sil">✕</button></div>`).join("")}
+    <datalist id="ekpad">${EKP_ONERI.map(x => `<option value="${x}">`).join("")}</datalist>
+    <div class="row" style="margin-top:6px"><button class="btn sec sm" id="ekpAdd">＋ Cihaz / ekipman ekle</button><span class="muted">${r.ekp.filter(d => d.ad || d.kod).length} cihaz</span></div></div>`;
+}
+function bindEkp(root, rerender) {
+  const r = f62();
+  root.querySelectorAll("[data-k2]").forEach(e => e.oninput = e.onchange = () => { r.ekp[+e.dataset.k2][e.dataset.x] = e.value; markDirty(); });
+  root.querySelectorAll("[data-kd]").forEach(b => b.onclick = () => { const n = +b.dataset.kd, d = r.ekp[n];
+    if ((d.ad || d.kod) && !confirm("Bu cihaz / ekipman satırı silinsin mi?")) return; r.ekp.splice(n, 1); if (!r.ekp.length) r.ekp.push({}); markDirty(); rerender(); });
+  const add = root.querySelector("#ekpAdd"); if (add) add.onclick = () => { r.ekp.push({}); markDirty(); rerender();
+    setTimeout(() => { const ins = root.querySelectorAll('.ekprow input[data-x="ad"]'); ins[ins.length - 1]?.focus(); }, 30); };
 }
 function f62Standart() {
   const hs = new Set();
@@ -110,8 +138,9 @@ function renderF62() {
         const [tr, en] = it.t.split(" / ");
         h += `<div class="item" data-v="${{ 1: "U", 2: "K", 3: "UY", UD: "UD" }[c.a] || ""}"><div class="h"><span class="tx"><b>${esc(tr)}</b>${en ? ` <span class="muted">/ ${esc(it.t.slice(tr.length + 3))}</span>` : ""}</span></div>
           <div class="codes" style="margin-left:0">${F62_AP.map(([v, l]) => `<button class="code ${c.a === v ? "on" : ""}" data-c="${{ 1: "U", 2: "K", 3: "UY", UD: "UD" }[v]}" data-ap="${v}" data-id="${it.id}" title="${l}">${v}</button>`).join("")}</div>
+          ${it.id === "R7_9" ? `<div class="muted" style="white-space:pre-line;margin-top:6px"><b>Kapaktaki cihaz / ekipman listesi (rapora otomatik eklenir):</b>\n${esc(ekpListe(r) || "— henüz cihaz girilmedi —")}</div>` : ""}
           ${it.id === "R5_10" ? `<div class="muted" style="white-space:pre-line;margin-top:6px"><b>Kapaktaki doküman listesi (rapora otomatik eklenir):</b>\n${esc(dokListe(r) || "— henüz doküman girilmedi —")}</div>` : ""}
-          <label class="f"><span>${it.id === "R5_10" ? "Ek açıklama" : "Açıklamalar / Explanations"}</span><textarea class="t" data-c="${it.id}" rows="${sec.id === "2.4" ? 8 : 2}">${esc(c.e || "")}</textarea></label></div>`;
+          <label class="f"><span>${it.id === "R5_10" || it.id === "R7_9" ? "Ek açıklama" : "Açıklamalar / Explanations"}</span><textarea class="t" data-c="${it.id}" rows="${sec.id === "2.4" ? 8 : 2}">${esc(c.e || "")}</textarea></label></div>`;
       });
     });
   });
@@ -157,6 +186,7 @@ async function exportF62() {
     const c = r.c[it.id] || {};
     let e = c.e || "";
     if (it.id === "R5_10") { const dl = dokListe(r); if (dl) e = dl + (e ? "\n" + e : ""); }
+    if (it.id === "R7_9") { const kl = ekpListe(r); if (kl) e = kl + (e ? "\n" + e : ""); }
     V["E_" + it.id] = c.a === "UD" ? ("UD" + (e ? " – " + e : "")) : e;
     [1, 2, 3].forEach(n => { const on = c.a === String(n); V[`K_${it.id}_${n}`] = on ? "1" : "0"; V[`C_${it.id}_${n}`] = on ? "☒" : "☐"; });
   })));
@@ -247,8 +277,9 @@ function renderKapak() {
     <h2>Bölüm 1 — Genel Bilgiler <small class="muted">/ Section 1 — General Information</small></h2>
     ${f62B1Html(r)}
     ${dokHtml(r)}
+    ${ekpHtml(r)}
     <div class="row" style="margin-top:12px"><button class="btn" id="kpGo">Çeklisti başlat ›</button><button class="btn sec" id="kpInfo">✎ Modülleri değiştir</button></div>`;
-  bindF62B1(p, renderKapak); bindDok(p, renderKapak);
+  bindF62B1(p, renderKapak); bindDok(p, renderKapak); bindEkp(p, renderKapak);
   $("#kpGo").onclick = () => { tab = A.modules[0] || "O"; renderAudit(); window.scrollTo(0, 0); };
   $("#kpInfo").onclick = () => editInfo(A);
 }
