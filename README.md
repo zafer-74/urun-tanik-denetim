@@ -27,6 +27,7 @@ Dayanak: 2014/33/AB Ek IV–XII · EA-2/17 M:2026 (rev05) + S1:2026 · NB-L RfU 
 - Filtre (boş / UY / K / notlu) ve arama
 - Tanık planı (EA-2/17 Annex B Tablo 2 gruplaması)
 - Otomatik özet ve bulgu listesi
+- **TÜRKAK F701-062 Rev.03** (Ürün Belgelendirme Kuruluşları için Tanık Denetim Raporu) formunun uygulama içinde doldurulması ve resmî şablon üzerine işlenmiş **Word (.docx)** çıktısı; Bölüm 2.4 ve Bölüm 3 çeklist sonuçlarından otomatik önerilir
 - Excel (.xlsx) dışa aktarma, yazdır / PDF, JSON yedek ve içe aktarma (cihazlar arası aktarım, fotoğraflar dahil)
 - Tamamen çevrimdışı; veriler yalnız cihazda (IndexedDB) saklanır
 
@@ -36,4 +37,4 @@ Dayanak: 2014/33/AB Ek IV–XII · EA-2/17 M:2026 (rev05) + S1:2026 · NB-L RfU 
 - **Android:** Chrome ile açın → ⋮ → *Uygulamayı yükle* (veya *Ana ekrana ekle*).
 
 ## Geliştirme
-Derleme adımı yoktur; statik dosyalar GitHub Pages'ten yayınlanır. Çeklist içeriği `data.js` dosyasındadır. İçerik değiştiğinde `sw.js` içindeki `CACHE` sürümü artırılmalıdır.
+Derleme adımı yoktur; statik dosyalar GitHub Pages'ten yayınlanır. Çeklist içeriği `data.js`, F701-062 form yapısı `f62.js`, Word şablonu `report/F701-062_sablon.docx` (yer tutuculu) dosyasındadır. İçerik değiştiğinde `sw.js` içindeki `CACHE` sürümü artırılmalıdır.

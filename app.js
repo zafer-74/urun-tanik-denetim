@@ -143,13 +143,14 @@ function renderAudit() {
   setBar(A.info.kurulus || "Denetim", (A.info.tarih || "") + " · " + A.modules.map(id => MOD[id].code).join(", "), true);
   const sh = sheetsOf(A);
   const tabs = [...sh.map(s => { const st = stats(A, s); return { id: s.id, t: (s.mod ? s.mod.code + " " : "") + s.ad, sub: st.done + "/" + st.n }; }),
-    { id: "tanik", t: "Tanık planı" }, { id: "ozet", t: "Özet ve bulgular" }];
+    { id: "tanik", t: "Tanık planı" }, { id: "ozet", t: "Özet ve bulgular" }, { id: "f62", t: "F701-062 Rapor" }];
   const v = $("#view");
   v.innerHTML = `<nav class="tabs">${tabs.map(x => `<button class="tab ${x.id === tab ? "on" : ""}" data-t="${x.id}">${esc(x.t)}${x.sub ? `<small>${x.sub}</small>` : ""}</button>`).join("")}</nav><div id="pane"></div>`;
   v.querySelectorAll(".tab").forEach(b => b.onclick = () => { tab = b.dataset.t; renderAudit(); window.scrollTo(0, 0); });
   const on = v.querySelector(".tab.on"); if (on) on.scrollIntoView({ inline: "center", block: "nearest" });
   if (tab === "ozet") return renderSummary();
   if (tab === "tanik") return renderTanik();
+  if (tab === "f62") return renderF62();
   renderSheet(sh.find(s => s.id === tab) || sh[0]);
 }
 
@@ -365,13 +366,13 @@ function printReport() {
 $("#btnMenu").onclick = e => {
   e.stopPropagation(); const m = $("#menu");
   if (!m.hidden) return (m.hidden = true);
-  m.innerHTML = `<button data-a="info">✎ Denetim bilgileri ve modüller</button><button data-a="xl">⬇ Excel'e aktar</button><button data-a="pr">🖨 Yazdır / PDF</button>
+  m.innerHTML = `<button data-a="info">✎ Denetim bilgileri ve modüller</button><button data-a="xl">⬇ Excel'e aktar</button><button data-a="pr">🖨 Yazdır / PDF</button><button data-a="f62">⬇ F701-062 tanık raporu (Word)</button>
     <button data-a="js">⬇ JSON yedeği (cihaz aktarımı)</button><button data-a="dup">⧉ Denetimi kopyala (boş çeklist)</button><button class="d" data-a="del">🗑 Denetimi sil</button>`;
   m.hidden = false;
   m.querySelectorAll("button").forEach(b => b.onclick = async () => {
     m.hidden = true; const a = b.dataset.a;
     if (a === "info") editInfo(A);
-    if (a === "xl") exportXlsx(); if (a === "pr") printReport(); if (a === "js") exportJson();
+    if (a === "f62") exportF62(); if (a === "xl") exportXlsx(); if (a === "pr") printReport(); if (a === "js") exportJson();
     if (a === "dup") { const n = { ...A, id: uid(), created: new Date().toISOString(), answers: {}, tanik: {}, info: { ...A.info, kurulus: (A.info.kurulus || "") + " (yeni)" } }; A = n; await saveNow(); openAudit(n.id); toast("Boş kopya oluşturuldu"); }
     if (a === "del" && confirm("Bu denetim ve fotoğrafları kalıcı olarak silinsin mi?")) {
       for (const p of await DB.photosOf(A.id)) await DB.del("photos", p.id); await DB.del("audits", A.id); toast("Silindi"); home();
