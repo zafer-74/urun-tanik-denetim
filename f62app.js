@@ -93,7 +93,7 @@ function f62Standart() {
     const ms = A.modules.filter(id => yonOf(MOD[id]) === y), hs = new Set();
     ms.forEach(id => { const o = Object.fromEntries(MOD[id].ozet); const a = o["Akreditasyon (EA-2/17 M:2026)"] || o["Akreditasyon (EA-2/17 S1)"] || ""; hs.add(a.split("·")[0].trim()); });
     const ad = y.id === "asansor" ? "2014/33/AB Asansör Direktifi (Asansör Yönetmeliği)" : y.ad;
-    return ad + " — " + ms.map(id => MOD[id].baslik.split("—")[0].trim().replace(/^EK/, "Ek")).join(", ") +
+    return ad + " — " + ms.map(id => MOD[id].ortakYok ? MOD[id].ad : MOD[id].baslik.split("—")[0].trim().replace(/^EK/, "Ek")).join(", ") +
       "\n" + [...hs].join(", ") + "; EA-2/17 M:2026 (+S1)" + (y.id === "asansor" ? "; NB-L RfU (16.07.2026)" : "; NB-M koordinasyon grubu dokümanları");
   }).join("\n");
 }
@@ -109,7 +109,7 @@ function f62Ozet24() {
   });
   const t = totalStats(A);
   if (t.UY) ap.v = "3"; else if (t.K) ap.v = "2";
-  yonsOf(A.modules).forEach(y => { const o = stats(A, ortakSheet(y));
+  ortakYonsOf(A.modules).forEach(y => { const o = stats(A, ortakSheet(y));
     lines.push(`${y.ortakAd} (${y.ortakMd}): ${o.done}/${o.n} madde — U ${o.U}, K ${o.K}, UY ${o.UY}, UD ${o.UD}.`); });
   return { text: lines.join("\n"), ap: ap.v };
 }
@@ -273,7 +273,7 @@ function renderKapak() {
     return `<div class="cover"><div class="cv-top"><span class="cv-code">${m.code}</span><div><div class="muted">${esc(y.ad)} › ${esc(grp)}</div><b>${esc(m.baslik)}</b></div></div>
       <div class="kunye">${["Direktif dayanağı", "Başvuran / OK çıktısı"].map(l => o[l] ? `<div><b>${l}</b><span>${esc(o[l])}</span></div>` : "").join("")}
       <div><b>Akreditasyon</b><span>${esc(o["Akreditasyon (EA-2/17 M:2026)"] || o["Akreditasyon (EA-2/17 S1)"] || "")}</span></div>
-      <div><b>Çeklist</b><span>${m.items.length} modül maddesi + ${ortakOf(y).length} ortak şart</span></div></div></div>`; }).join("");
+      <div><b>Çeklist</b><span>${m.items.length} modül maddesi${ortakTxt(m)}</span></div></div></div>`; }).join("");
   p.innerHTML = `<div class="formhead"><div class="fh-l">TÜRK AKREDİTASYON KURUMU</div><div class="fh-r">F<br><small>701-062</small></div></div>
     <div class="fh-title"><b>Ürün Belgelendirme Kuruluşları için Tanık Denetim Raporu</b><i>Witness Assessment Report Used For Product Certification</i></div>
     ${covers}

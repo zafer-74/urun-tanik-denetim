@@ -21,6 +21,7 @@
 | Makine ve ilgili ürünler — (AB) 2023/1230 Md. 25 | M1 Modül B (Ek VII) | 56 |
 | | M2 Modül G (Ek X) | 44 |
 | | M3 Modül H (Ek IX) | 56 |
+| Geçiş denetimi (2006/42/AT → 2023/1230) | GD TÜRKAK 2023/1230 Geçiş Denetim Kontrol Listesi (A Başvuru · B Doküman · C Ofis · D Kapsam eşleştirme · E Tanık · F Karar · G Standartlar; ortak şart eklenmez) | 142 |
 | Tüm makine denetimleri | Makine Ortak Şartlar ((AB) 2023/1230 Md. 25(5), 30, 32, 36(2), 38–40, 42) | 32 |
 
 Dayanak: 2014/33/AB Ek IV–XII · (AB) 2023/1230 Md. 25, 30–42, Ek IV, VII, IX, X · EA-2/17 M:2026 (rev05) + S1:2026 · NB-L RfU derlemesi 16.07.2026.

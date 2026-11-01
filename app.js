@@ -10,6 +10,8 @@ const GRP = Object.fromEntries(YONS.flatMap(y => y.gruplar.map(g => [g.id, g])))
 const yonOf = m => YON_OF[m.yon] || YONS[0];
 const yonsOf = mods => YONS.filter(y => mods.some(id => MOD[id] && yonOf(MOD[id]) === y));
 const ortakOf = y => D[y.ortak] || [];
+const ortakYonsOf = mods => YONS.filter(y => mods.some(id => MOD[id] && !MOD[id].ortakYok && yonOf(MOD[id]) === y));
+const ortakTxt = m => m.ortakYok ? "" : ` + ${ortakOf(yonOf(m)).length} ortak şart`;
 const ortakSheet = y => ({ id: y.ortakId, ad: y.ortakAd, items: ortakOf(y), yon: y });
 const shCode = sh => sh.mod ? sh.mod.code : sh.id;
 const $ = (s, el = document) => el.querySelector(s);
@@ -82,7 +84,7 @@ async function exitApp() {
 function markDirty() { $("#saveState").textContent = "kaydediliyor…"; clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 500); }
 async function saveNow() { if (!A) return; A.updated = new Date().toISOString(); await DB.put("audits", A); $("#saveState").textContent = "✓ kaydedildi"; }
 
-function sheetsOf(a) { return [...yonsOf(a.modules).map(ortakSheet), ...a.modules.map(id => ({ id, ad: MOD[id].ad, items: MOD[id].items, mod: MOD[id] }))]; }
+function sheetsOf(a) { return [...ortakYonsOf(a.modules).map(ortakSheet), ...a.modules.map(id => ({ id, ad: MOD[id].ad, items: MOD[id].items, mod: MOD[id] }))]; }
 function key(sheet, no) { return sheet + "|" + no; }
 function stats(a, sheet) {
   const s = { n: sheet.items.length, U: 0, K: 0, UY: 0, UD: 0, "İ": 0 };
@@ -154,7 +156,7 @@ function launchTree() {
   return `<div class="tree launch">${YONS.map(y => { const ym = D.modules.filter(m => yonOf(m) === y);
     return `<details class="lv0"><summary><div class="grow"><b>${y.ad}</b><div class="muted">${y.alt} · ${ym.length} modül</div></div><span class="arr">›</span></summary>
     ${y.gruplar.map(g => `<details class="lv1"><summary><div class="grow"><b>${g.ad}</b><div class="muted">${g.md} · ${ms(g).length} modül</div></div><span class="arr">›</span></summary>
-      <div class="lv2">${ms(g).map(m => `<button class="go" data-m="${m.id}"><div class="grow"><b>${m.code}</b> ${esc(m.ad)}<div class="muted">${m.items.length} madde + ${ortakOf(y).length} ortak şart · dokunun, denetim açılsın</div></div><span class="plus">＋</span></button>`).join("")}</div></details>`).join("")}
+      <div class="lv2">${ms(g).map(m => `<button class="go" data-m="${m.id}"><div class="grow"><b>${m.code}</b> ${esc(m.ad)}<div class="muted">${m.items.length} madde${ortakTxt(m)} · dokunun, denetim açılsın</div></div><span class="plus">＋</span></button>`).join("")}</div></details>`).join("")}
     </details>`; }).join("")}</div>`;
 }
 async function startAudit(mods) {
